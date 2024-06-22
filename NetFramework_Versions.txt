@@ -1,0 +1,28 @@
+# Lista de versões do .NET Framework e seus valores de entrada no Registro:
+# .NET Framework 4.5: 378389
+# .NET Framework 4.5.1: 378675 (Windows 8.1) ou 378758 (outros)
+# .NET Framework 4.5.2: 379893
+# .NET Framework 4.6: 393295 (Windows 10) ou 393297 (outros)
+# .NET Framework 4.6.1: 394254 (Windows 10) ou 394271 (outros)
+# .NET Framework 4.6.2: 394802 (Windows 10) ou 394806 (outros)
+# .NET Framework 4.7: 460798 (Windows 10) ou 460805 (outros)
+# .NET Framework 4.7.1: 461308 (Windows 10) ou 461310 (outros)
+# .NET Framework 4.7.2: 461808
+# .NET Framework 4.8: 528040 (Windows 10) ou 528049 (outros)
+
+# Script para verificar a versão do .NET Framework instalada:
+$releaseKey = (Get-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full' -Name Release -ErrorAction SilentlyContinue).Release
+
+switch ($releaseKey) {
+    {$_ -eq 378389} { "Versão instalada: .NET Framework 4.5" }
+    {$_ -eq 378675 -or $_ -eq 378758} { "Versão instalada: .NET Framework 4.5.1" }
+    {$_ -eq 379893} { "Versão instalada: .NET Framework 4.5.2" }
+    {$_ -eq 393295 -or $_ -eq 393297} { "Versão instalada: .NET Framework 4.6" }
+    {$_ -eq 394254 -or $_ -eq 394271} { "Versão instalada: .NET Framework 4.6.1" }
+    {$_ -eq 394802 -or $_ -eq 394806} { "Versão instalada: .NET Framework 4.6.2" }
+    {$_ -eq 460798 -or $_ -eq 460805} { "Versão instalada: .NET Framework 4.7" }
+    {$_ -eq 461308 -or $_ -eq 461310} { "Versão instalada: .NET Framework 4.7.1" }
+    {$_ -eq 461808} { "Versão instalada: .NET Framework 4.7.2" }
+    {$_ -eq 528040 -or $_ -eq 528049} { "Versão instalada: .NET Framework 4.8" }
+    default { "Versão do .NET Framework não identificada ou não instalada" }
+}
