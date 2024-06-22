@@ -1,0 +1,29 @@
+# Verificar se o script está sendo executado com privilégios de administrador
+if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
+    Write-Warning "Por favor, execute este script como Administrador."
+    exit
+}
+
+# Variável para o nome do recurso
+$featureName = "NetFx3"
+
+# Tentar habilitar o .NET Framework 3.5 usando o DISM
+try {
+    Write-Host "Tentando habilitar o .NET Framework 3.5..."
+    Enable-WindowsOptionalFeature -Online -FeatureName $featureName -All -NoRestart -LimitAccess -Source "C:\sources\sxs"
+    Write-Host ".NET Framework 3.5 foi habilitado com sucesso."
+} catch {
+    Write-Host "Não foi possível habilitar o .NET Framework 3.5 a partir da fonte especificada. Tentando a partir do Windows Update..."
+
+    # Comando para habilitar o .NET Framework 3.5 a partir do Windows Update
+    try {
+        Install-WindowsFeature -Name $featureName -IncludeAllSubFeature -Source "C:\sources\sxs"
+        Write-Host ".NET Framework 3.5 foi habilitado com sucesso a partir do Windows Update."
+    } catch {
+        Write-Host "Ocorreu um erro ao tentar habilitar o .NET Framework 3.5."
+        Write-Host $_.Exception.Message
+    }
+}
+
+# Finalizar e reiniciar (se necessário)
+Write-Host "Se necessário, por favor, reinicie o computador para concluir a instalação."
