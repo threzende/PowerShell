@@ -1,0 +1,41 @@
+# Verificar se o script está sendo executado com privilégios de administrador
+if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
+    Write-Warning "Por favor, execute este script como Administrador."
+    exit
+}
+
+# Verificar se o .NET Framework 3.5 já está instalado
+$dotNet35 = Get-WindowsFeature | Where-Object { $_.Name -eq "NET-Framework-Core" }
+if ($dotNet35.Installed) {
+    Write-Host ".NET Framework 3.5 já está instalado."
+    exit
+}
+
+# Definir o caminho para os arquivos de instalação do .NET Framework 3.5 (altere conforme necessário)
+$sourcePath = "D:\sources\sxs"
+
+# Verificar se o caminho de origem existe
+if (!(Test-Path $sourcePath)) {
+    Write-Host "Erro: O caminho de origem $sourcePath não foi encontrado. Verifique o caminho e tente novamente."
+    exit
+}
+
+# Tentar instalar o .NET Framework 3.5
+try {
+    Write-Host "Instalando o .NET Framework 3.5 a partir de $sourcePath..."
+
+    # Instalar o .NET Framework 3.5 usando o cmdlet Deployment Image Servicing and Management (DISM)
+    $featureName = "NetFx3"
+    $installCommand = "Install-WindowsFeature -Name $featureName -Source $sourcePath -Restart"
+
+    # Executar o comando de instalação
+    Invoke-Expression -Command $installCommand
+
+    Write-Host ".NET Framework 3.5 foi instalado com sucesso."
+} catch {
+    Write-Host "Ocorreu um erro ao tentar instalar o .NET Framework 3.5."
+    Write-Host $_.Exception.Message
+}
+
+# Finalizar e reiniciar (se necessário)
+Write-Host "Se necessário, por favor, reinicie o computador para concluir a instalação."
