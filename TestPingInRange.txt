@@ -1,0 +1,29 @@
+# Define o intervalo de endereços IP
+$startRange = 4
+$endRange = 18
+$baseIP = "10.9.8."
+
+# Função para pingar um endereço IP e obter o nome do host
+function Ping-IP {
+    param (
+        [string]$ipAddress
+    )
+    $pingResult = Test-Connection -ComputerName $ipAddress -Count 1 -Quiet
+    if ($pingResult) {
+        try {
+            $hostEntry = [System.Net.Dns]::GetHostEntry($ipAddress)
+            $hostName = $hostEntry.HostName
+            Write-Host "$ipAddress está acessível. Nome do host: $hostName" -ForegroundColor Green
+        } catch {
+            Write-Host "$ipAddress está acessível, mas não foi possível obter o nome do host." -ForegroundColor Yellow
+        }
+    } else {
+        Write-Host "$ipAddress não está acessível" -ForegroundColor Red
+    }
+}
+
+# Loop para pingar cada endereço IP no intervalo
+for ($i = $startRange; $i -le $endRange; $i++) {
+    $ipAddress = $baseIP + $i
+    Ping-IP -ipAddress $ipAddress
+}
