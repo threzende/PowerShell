@@ -1,10 +1,1 @@
-Hi Jamie,
-
-The file has been recovered, but it seems that some users still cannot access it. First, it's important to check if the person has the necessary permissions. There's a specific group they need to belong to, which grants read and write permissions. To facilitate this process, I created a Word document that the user can use to check if they can write to and save the file. The Access DB document requires some answers to open because of a macro, which is likely related to security policies.
-
-I've asked Danilo to assist with this. If you could provide the email addresses of the users who need access to Danilo, he can help. If there are any issues with permissions, I can assist with the Active Directory part.
-
-I will continue to monitor and provide support.
-
-Best regards,
-Thiago Oliveira
+!
