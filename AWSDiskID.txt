@@ -1,0 +1,11 @@
+# Perguntar ao usuário qual partição deseja
+$label = Read-Host "Qual a partição que você deseja?"
+
+# Obter o número do disco físico associado à unidade especificada
+$diskNumber = (Get-Partition -DriveLetter $label).DiskNumber
+
+# Obter o número de série do disco físico
+$serialNumber = (Get-PhysicalDisk | Where-Object { $_.DeviceId -eq $diskNumber }).SerialNumber
+
+# Exibir o número de série
+Write-Output "O número de série do disco $label é: $serialNumber"
