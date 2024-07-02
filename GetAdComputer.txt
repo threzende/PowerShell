@@ -1,0 +1,1 @@
+Get-ADComputer -Filter {Name -eq "server01" -or Name -eq "server02"}
