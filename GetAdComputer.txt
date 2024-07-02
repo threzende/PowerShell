@@ -1,1 +1,11 @@
-Get-ADComputer -Filter {Name -eq "server01" -or Name -eq "server02"}
+$computers = "server01", "server02"
+
+foreach ($computer in $computers) {
+    $adComputer = Get-ADComputer -Filter {Name -eq $computer} -ErrorAction SilentlyContinue
+    
+    if ($adComputer) {
+        Write-Output "$computer found in AD"
+    } else {
+        Write-Output "$computer not found in AD"
+    }
+}
