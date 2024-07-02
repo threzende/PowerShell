@@ -1,11 +1,23 @@
-$computers = "server01", "server02"
+# Define o caminho do arquivo de texto contendo os nomes dos servidores
+$arquivoServidores = "D:\temp\servers.txt"
 
-foreach ($computer in $computers) {
-    $adComputer = Get-ADComputer -Filter {Name -eq $computer} -ErrorAction SilentlyContinue
-    
-    if ($adComputer) {
-        Write-Output "$computer found in AD"
-    } else {
-        Write-Output "$computer not found in AD"
+# Verifica se o arquivo existe
+if (Test-Path $arquivoServidores) {
+    # Lê os nomes dos servidores do arquivo
+    $computers = Get-Content $arquivoServidores
+
+    # Obtém a data e hora atual
+    $dataHoraConsulta = Get-Date
+
+    foreach ($computer in $computers) {
+        $adComputer = Get-ADComputer -Filter {Name -eq $computer} -ErrorAction SilentlyContinue
+
+        if ($adComputer) {
+            Write-Output "$computer found in AD at $dataHoraConsulta"
+        } else {
+            Write-Output "$computer not found in AD at $dataHoraConsulta"
+        }
     }
+} else {
+    Write-Output "Arquivo $arquivoServidores não encontrado."
 }
