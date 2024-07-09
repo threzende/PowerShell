@@ -1,0 +1,67 @@
+# Verifica e exibe a política de execução atual
+$currentPolicy = Get-ExecutionPolicy
+Write-Host "A política de execução atual é: $currentPolicy"
+
+# Explicação resumida das políticas de execução
+$policyExplanations = @"
+Políticas de Execução:
+----------------------
+
+1. Restricted:
+    Não permite a execução de nenhum script. Esta é a configuração padrão no Windows.
+
+2. AllSigned:
+    Permite a execução de scripts, mas todos os scripts e arquivos de configuração devem ser assinados por um editor de confiança.
+
+3. RemoteSigned:
+    Permite a execução de scripts locais sem assinatura. Scripts baixados da Internet devem ser assinados por um editor de confiança.
+
+4. Unrestricted:
+    Permite a execução de todos os scripts. Scripts baixados da Internet avisarão antes da execução.
+
+5. Bypass:
+    Nenhuma restrição. Todos os scripts podem ser executados sem qualquer aviso ou restrição.
+
+6. Undefined:
+    Sem política de execução definida. Se nenhuma política estiver definida, o PowerShell usará a política padrão (Restricted).
+
+"@
+
+Write-Host $policyExplanations
+
+# Menu interativo para escolher a política de execução
+$choice = Read-Host "Digite o número da política de execução que você deseja definir (1-6)"
+
+switch ($choice) {
+    1 {
+        Set-ExecutionPolicy Restricted -Scope CurrentUser
+        Write-Host "A política de execução foi definida para: Restricted"
+    }
+    2 {
+        Set-ExecutionPolicy AllSigned -Scope CurrentUser
+        Write-Host "A política de execução foi definida para: AllSigned"
+    }
+    3 {
+        Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
+        Write-Host "A política de execução foi definida para: RemoteSigned"
+    }
+    4 {
+        Set-ExecutionPolicy Unrestricted -Scope CurrentUser
+        Write-Host "A política de execução foi definida para: Unrestricted"
+    }
+    5 {
+        Set-ExecutionPolicy Bypass -Scope CurrentUser
+        Write-Host "A política de execução foi definida para: Bypass"
+    }
+    6 {
+        Set-ExecutionPolicy Undefined -Scope CurrentUser
+        Write-Host "A política de execução foi definida para: Undefined"
+    }
+    default {
+        Write-Host "Escolha inválida. Nenhuma mudança foi feita."
+    }
+}
+
+# Verifica e exibe a política de execução atual após a mudança
+$currentPolicyAfter = Get-ExecutionPolicy
+Write-Host "A política de execução após a mudança é: $currentPolicyAfter"
