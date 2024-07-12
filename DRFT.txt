@@ -1,3 +1,0 @@
-Olá pessoal,
-
-Estamos com alguns chamados SEV2 na fila com "awaiting user info" porque são servidores que precisam ser reiniciados. Gostaria de pedir apoio no monitoramento desses chamados, pois os usuários podem respondê-los de manhã e alterar o ticket para "active", o que pode afetar o SLA.
