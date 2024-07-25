@@ -1,5 +1,0 @@
-Hi Jamie,
-
-Below is the step-by-step guide to open this file.
-
-First, the user needs to have access to modify the file. There is a group for this, but it's important to note that this group also includes access to the previous folders. Therefore, a request should be made first to join this group.
