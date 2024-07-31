@@ -1,35 +1,30 @@
-# Define o intervalo de tempo que você deseja consultar
-$startDate = (Get-Date).AddDays(-30) # Por exemplo, últimos 30 dias
+# Define a quantidade de dias a serem verificados (30 dias para 1 mês)
+$days = 30
 
-# Define os IDs de evento de interesse
-$eventIDs = @(
-    1,    # Sleep
-    42,   # Resume from Sleep
-    6005, # Startup (EventLog start)
-    6006, # Clean Shutdown (EventLog stop)
-    6008  # Unexpected Shutdown
-)
+# Define a data inicial para a consulta
+$startDate = (Get-Date).AddDays(-$days)
 
-# Obtém eventos do log de Sistema no intervalo especificado
+# Busca eventos de inicialização (ID 6005), desligamento (ID 6006, 6008), suspensão (ID 42) e retomada (ID 1)
 $events = Get-WinEvent -FilterHashtable @{
     LogName = 'System'
+    Id = 1, 42, 6005, 6006, 6008
     StartTime = $startDate
-    ID = $eventIDs
 } | Select-Object TimeCreated, Id, Message
 
-# Mapeia os IDs de evento para descrições legíveis
-$eventTypeMap = @{
-    1 = "Sleep"
-    42 = "Resume from Sleep"
-    6005 = "Startup"
-    6006 = "Clean Shutdown"
-    6008 = "Unexpected Shutdown"
+# Define um formato para exibição
+$format = @{ 
+    Name = 'Event Type'; 
+    Expression = {
+        switch ($_.Id) {
+            1    { "Resume from Sleep" }
+            42   { "Sleep" }
+            6005 { "Startup 6005" }
+            6006 { "Clean Shutdown 6006 " }
+            6008 { "Unexpected Shutdown 6008" }
+            Default { "Other" }
+        }
+    }
 }
 
-# Processa e exibe os eventos em formato tabular
-$events | ForEach-Object {
-    [PSCustomObject]@{
-        TimeCreated = $_.TimeCreated
-        'Event Type' = $eventTypeMap[$_.Id]
-    }
-} | Sort-Object TimeCreated | Format-Table -AutoSize
+# Exibe os eventos encontrados com data e tipo de evento
+$events | Select-Object TimeCreated, $format | Sort-Object TimeCreated
