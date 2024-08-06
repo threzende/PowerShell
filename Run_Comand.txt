@@ -1,0 +1,2 @@
+Computer Management (Gerenciamento do Computador):
+compmgmt.msc
