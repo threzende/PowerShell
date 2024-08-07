@@ -1,0 +1,1 @@
+PowerShell -ExecutionPolicy Bypass -File C:\caminho\para\verificar_servico_xagt.ps1
