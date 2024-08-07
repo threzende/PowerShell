@@ -13,16 +13,10 @@ if (-Not (Test-Path -Path $servidoresPath)) {
 # Ler a lista de servidores
 $servidores = Get-Content -Path $servidoresPath
 
-# Inicializar o contador
-$contador = 0
-
 # Loop para verificar o status do serviço em cada servidor
 foreach ($servidor in $servidores) {
-    # Incrementar o contador
-    $contador++
-
-    # Exibir o número do servidor
-    Write-Host ("Verificando servidor " + $contador + ": " + $servidor)
+    # Exibir o nome do servidor
+    Write-Host ("Verificando servidor: " + $servidor)
 
     # Testar conexão com o servidor
     if (Test-Connection -ComputerName $servidor -Count 1 -Quiet) {
@@ -31,16 +25,16 @@ foreach ($servidor in $servidores) {
             $statusServico = Get-Service -Name $nomeServico -ComputerName $servidor -ErrorAction Stop
 
             if ($statusServico.Status -eq 'Running') {
-                Write-Host ($contador + ": " + $servidor + ": " + $nomeServico + " está Running") -ForegroundColor Green
+                Write-Host ($servidor + ": " + $nomeServico + " está Running") -ForegroundColor Green
             } else {
-                Write-Host ($contador + ": " + $servidor + ": " + $nomeServico + " NÃO está Running (Status: " + $statusServico.Status + ")") -ForegroundColor Yellow
+                Write-Host ($servidor + ": " + $nomeServico + " NÃO está Running (Status: " + $statusServico.Status + ")") -ForegroundColor Yellow
             }
         } catch {
             # Captura erros e exibe mensagem apropriada
-            Write-Host ($contador + ": " + $servidor + ": Erro ao tentar verificar o serviço (" + $_.Exception.Message + ")") -ForegroundColor Red
+            Write-Host ($servidor + ": Erro ao tentar verificar o serviço (" + $_.Exception.Message + ")") -ForegroundColor Red
         }
     } else {
-        Write-Host ($contador + ": " + $servidor + ": Não foi possível conectar ao servidor") -ForegroundColor Red
+        Write-Host ($servidor + ": Não foi possível conectar ao servidor") -ForegroundColor Red
     }
 }
 
