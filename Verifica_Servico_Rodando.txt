@@ -30,7 +30,7 @@ for /f "tokens=*" %%s in (%servidoresPath%) do (
         echo !contador!: %%s: Nao foi possivel conectar ao servidor
     ) else (
         REM Verificar o status do serviço
-        sc \\%%s query %nomeServico% | find "RUNNING" >nul
+        sc \\%%s query %nomeServico% | findstr /i "STATE" | findstr /i "RUNNING" >nul
         if errorlevel 0 (
             echo !contador!: %%s: %nomeServico% esta Running
         ) else (
