@@ -4,25 +4,37 @@ $servidoresPath = "C:\caminho\para\servidores.txt"
 # Nome do serviço a ser verificado
 $nomeServico = "xagt"
 
+# Verificar se o arquivo existe
+if (-Not (Test-Path -Path $servidoresPath)) {
+    Write-Host "Arquivo de servidores não encontrado em $servidoresPath" -ForegroundColor Red
+    exit
+}
+
 # Ler a lista de servidores
 $servidores = Get-Content -Path $servidoresPath
 
 # Loop para verificar o status do serviço em cada servidor
 foreach ($servidor in $servidores) {
     try {
-        # Verificar se é possível acessar o servidor
-        Test-Connection -ComputerName $servidor -Count 1 -ErrorAction Stop | Out-Null
-        
-        # Obter status do serviço
-        $statusServico = Get-Service -Name $nomeServico -ComputerName $servidor -ErrorAction Stop
+        # Testar conexão com o servidor
+        if (Test-Connection -ComputerName $servidor -Count 1 -Quiet) {
+            # Obter status do serviço
+            $statusServico = Get-Service -Name $nomeServico -ComputerName $servidor -ErrorAction SilentlyContinue
 
-        if ($statusServico.Status -eq 'Running') {
-            Write-Output "$servidor: $nomeServico está Running"
+            if ($null -ne $statusServico) {
+                if ($statusServico.Status -eq 'Running') {
+                    Write-Host "$servidor: $nomeServico está Running" -ForegroundColor Green
+                } else {
+                    Write-Host "$servidor: $nomeServico NÃO está Running (Status: $($statusServico.Status))" -ForegroundColor Yellow
+                }
+            } else {
+                Write-Host "$servidor: Serviço $nomeServico não encontrado" -ForegroundColor Red
+            }
         } else {
-            Write-Output "$servidor: $nomeServico NÃO está Running (Status: $($statusServico.Status))"
+            Write-Host "$servidor: Não foi possível conectar ao servidor" -ForegroundColor Red
         }
     } catch {
         # Captura erros e exibe mensagem apropriada
-        Write-Output "$servidor: Não foi possível conectar ou verificar o serviço ($($_.Exception.Message))"
+        Write-Host "$servidor: Erro ao tentar verificar o serviço ($($_.Exception.Message))" -ForegroundColor Red
     }
 }
