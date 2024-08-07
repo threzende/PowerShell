@@ -21,13 +21,20 @@ foreach ($servidor in $servidores) {
     # Testar conexão com o servidor
     if (Test-Connection -ComputerName $servidor -Count 1 -Quiet) {
         try {
-            # Obter status do serviço
-            $statusServico = Get-Service -Name $nomeServico -ComputerName $servidor -ErrorAction Stop
+            # Verificar se o serviço está instalado
+            $servicoInstalado = Get-Service -ComputerName $servidor | Where-Object { $_.Name -eq $nomeServico }
+            
+            if ($servicoInstalado) {
+                # Obter status do serviço
+                $statusServico = Get-Service -Name $nomeServico -ComputerName $servidor -ErrorAction Stop
 
-            if ($statusServico.Status -eq 'Running') {
-                Write-Host ($servidor + ": " + $nomeServico + " está Running") -ForegroundColor Green
+                if ($statusServico.Status -eq 'Running') {
+                    Write-Host ($servidor + ": " + $nomeServico + " está Running") -ForegroundColor Green
+                } else {
+                    Write-Host ($servidor + ": " + $nomeServico + " NÃO está Running (Status: " + $statusServico.Status + ")") -ForegroundColor Yellow
+                }
             } else {
-                Write-Host ($servidor + ": " + $nomeServico + " NÃO está Running (Status: " + $statusServico.Status + ")") -ForegroundColor Yellow
+                Write-Host ($servidor + ": Serviço " + $nomeServico + " não está instalado") -ForegroundColor Red
             }
         } catch {
             # Captura erros e exibe mensagem apropriada
