@@ -1,0 +1,28 @@
+# Caminho para o arquivo com a lista de servidores
+$servidoresPath = "C:\caminho\para\servidores.txt"
+
+# Nome do serviço a ser verificado
+$nomeServico = "xagt"
+
+# Ler a lista de servidores
+$servidores = Get-Content -Path $servidoresPath
+
+# Loop para verificar o status do serviço em cada servidor
+foreach ($servidor in $servidores) {
+    try {
+        # Verificar se é possível acessar o servidor
+        Test-Connection -ComputerName $servidor -Count 1 -ErrorAction Stop | Out-Null
+        
+        # Obter status do serviço
+        $statusServico = Get-Service -Name $nomeServico -ComputerName $servidor -ErrorAction Stop
+
+        if ($statusServico.Status -eq 'Running') {
+            Write-Output "$servidor: $nomeServico está Running"
+        } else {
+            Write-Output "$servidor: $nomeServico NÃO está Running (Status: $($statusServico.Status))"
+        }
+    } catch {
+        # Captura erros e exibe mensagem apropriada
+        Write-Output "$servidor: Não foi possível conectar ou verificar o serviço ($($_.Exception.Message))"
+    }
+}
