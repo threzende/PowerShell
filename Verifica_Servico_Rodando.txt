@@ -6,7 +6,7 @@ $nomeServico = "xagt"
 
 # Verificar se o arquivo existe
 if (-Not (Test-Path -Path $servidoresPath)) {
-    Write-Host "Arquivo de servidores não encontrado em $servidoresPath" -ForegroundColor Red
+    Write-Host ("Arquivo de servidores não encontrado em " + $servidoresPath) -ForegroundColor Red
     exit
 }
 
@@ -22,7 +22,7 @@ foreach ($servidor in $servidores) {
     $contador++
 
     # Exibir o número do servidor
-    Write-Host "Verificando servidor $contador: $servidor"
+    Write-Host ("Verificando servidor " + $contador + ": " + $servidor)
 
     # Testar conexão com o servidor
     if (Test-Connection -ComputerName $servidor -Count 1 -Quiet) {
@@ -31,16 +31,16 @@ foreach ($servidor in $servidores) {
             $statusServico = Get-Service -Name $nomeServico -ComputerName $servidor -ErrorAction Stop
 
             if ($statusServico.Status -eq 'Running') {
-                Write-Host "$contador: $servidor: $nomeServico está Running" -ForegroundColor Green
+                Write-Host ($contador + ": " + $servidor + ": " + $nomeServico + " está Running") -ForegroundColor Green
             } else {
-                Write-Host "$contador: $servidor: $nomeServico NÃO está Running (Status: $($statusServico.Status))" -ForegroundColor Yellow
+                Write-Host ($contador + ": " + $servidor + ": " + $nomeServico + " NÃO está Running (Status: " + $statusServico.Status + ")") -ForegroundColor Yellow
             }
         } catch {
             # Captura erros e exibe mensagem apropriada
-            Write-Host "$contador: $servidor: Erro ao tentar verificar o serviço ($($_.Exception.Message))" -ForegroundColor Red
+            Write-Host ($contador + ": " + $servidor + ": Erro ao tentar verificar o serviço (" + $_.Exception.Message + ")") -ForegroundColor Red
         }
     } else {
-        Write-Host "$contador: $servidor: Não foi possível conectar ao servidor" -ForegroundColor Red
+        Write-Host ($contador + ": " + $servidor + ": Não foi possível conectar ao servidor") -ForegroundColor Red
     }
 }
 
