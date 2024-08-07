@@ -13,22 +13,33 @@ if not exist "%servidoresPath%" (
     exit /b 1
 )
 
+REM Inicializar o contador
+set /a contador=0
+
 REM Ler a lista de servidores e verificar o status do serviço
 for /f "tokens=*" %%s in (%servidoresPath%) do (
-    echo Verificando servidor: %%s
-    REM Verificar se o servidor esta acessivel
+    REM Incrementar o contador
+    set /a contador+=1
+
+    REM Exibir o número do servidor
+    echo Verificando servidor !contador!: %%s
+
+    REM Verificar se o servidor está acessível
     ping -n 1 %%s >nul 2>&1
     if errorlevel 1 (
-        echo %%s: Nao foi possivel conectar ao servidor
+        echo !contador!: %%s: Nao foi possivel conectar ao servidor
     ) else (
-        REM Verificar o status do servico
+        REM Verificar o status do serviço
         sc \\%%s query %nomeServico% | find "RUNNING" >nul
         if errorlevel 0 (
-            echo %%s: %nomeServico% esta Running
+            echo !contador!: %%s: %nomeServico% esta Running
         ) else (
-            echo %%s: %nomeServico% NAO esta Running
+            echo !contador!: %%s: %nomeServico% NAO esta Running
         )
     )
 )
+
+REM Pausa para manter a janela aberta
+pause
 
 endlocal
