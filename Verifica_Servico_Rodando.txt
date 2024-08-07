@@ -1,40 +1,34 @@
-# Caminho para o arquivo com a lista de servidores
-$servidoresPath = "C:\caminho\para\servidores.txt"
+@echo off
+setlocal enabledelayedexpansion
 
-# Nome do serviço a ser verificado
-$nomeServico = "xagt"
+REM Caminho para o arquivo com a lista de servidores
+set "servidoresPath=C:\caminho\para\servidores.txt"
 
-# Verificar se o arquivo existe
-if (-Not (Test-Path -Path $servidoresPath)) {
-    Write-Host "Arquivo de servidores não encontrado em $servidoresPath" -ForegroundColor Red
-    exit
-}
+REM Nome do serviço a ser verificado
+set "nomeServico=xagt"
 
-# Ler a lista de servidores
-$servidores = Get-Content -Path $servidoresPath
+REM Verificar se o arquivo existe
+if not exist "%servidoresPath%" (
+    echo Arquivo de servidores nao encontrado em %servidoresPath%
+    exit /b 1
+)
 
-# Loop para verificar o status do serviço em cada servidor
-foreach ($servidor in $servidores) {
-    try {
-        # Testar conexão com o servidor
-        if (Test-Connection -ComputerName $servidor -Count 1 -Quiet) {
-            # Obter status do serviço
-            $statusServico = Get-Service -Name $nomeServico -ComputerName $servidor -ErrorAction SilentlyContinue
+REM Ler a lista de servidores e verificar o status do serviço
+for /f "tokens=*" %%s in (%servidoresPath%) do (
+    echo Verificando servidor: %%s
+    REM Verificar se o servidor esta acessivel
+    ping -n 1 %%s >nul 2>&1
+    if errorlevel 1 (
+        echo %%s: Nao foi possivel conectar ao servidor
+    ) else (
+        REM Verificar o status do servico
+        sc \\%%s query %nomeServico% | find "RUNNING" >nul
+        if errorlevel 0 (
+            echo %%s: %nomeServico% esta Running
+        ) else (
+            echo %%s: %nomeServico% NAO esta Running
+        )
+    )
+)
 
-            if ($null -ne $statusServico) {
-                if ($statusServico.Status -eq 'Running') {
-                    Write-Host "$servidor: $nomeServico está Running" -ForegroundColor Green
-                } else {
-                    Write-Host "$servidor: $nomeServico NÃO está Running (Status: $($statusServico.Status))" -ForegroundColor Yellow
-                }
-            } else {
-                Write-Host "$servidor: Serviço $nomeServico não encontrado" -ForegroundColor Red
-            }
-        } else {
-            Write-Host "$servidor: Não foi possível conectar ao servidor" -ForegroundColor Red
-        }
-    } catch {
-        # Captura erros e exibe mensagem apropriada
-        Write-Host "$servidor: Erro ao tentar verificar o serviço ($($_.Exception.Message))" -ForegroundColor Red
-    }
-}
+endlocal
