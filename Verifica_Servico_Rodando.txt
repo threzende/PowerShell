@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 REM Caminho para o arquivo com a lista de servidores
-set "servidoresPath=C:\caminho\para\servidores.txt"
+set "servidoresPath=C:\temp\nwsq\servidores.txt"
 
 REM Nome do serviço a ser verificado
 set "nomeServico=xagt"
@@ -29,13 +29,19 @@ for /f "tokens=*" %%s in (%servidoresPath%) do (
     if errorlevel 1 (
         echo !contador!: %%s: Nao foi possivel conectar ao servidor
     ) else (
-        REM Verificar o status do serviço
-        sc \\%%s query %nomeServico% | findstr /i "STATE" | findstr /i "RUNNING" >nul
+        REM Obter status do serviço e salvar em um arquivo temporário
+        sc \\%%s query %nomeServico% > "%temp%\sc_query_!contador!.txt"
+
+        REM Verificar se o serviço está rodando
+        findstr /i "STATE" "%temp%\sc_query_!contador!.txt" | findstr /i "RUNNING" >nul
         if errorlevel 0 (
             echo !contador!: %%s: %nomeServico% esta Running
         ) else (
             echo !contador!: %%s: %nomeServico% NAO esta Running
         )
+
+        REM Limpar o arquivo temporário
+        del "%temp%\sc_query_!contador!.txt"
     )
 )
 
