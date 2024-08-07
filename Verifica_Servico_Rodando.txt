@@ -1,51 +1,48 @@
-@echo off
-setlocal enabledelayedexpansion
+# Caminho para o arquivo com a lista de servidores
+$servidoresPath = "C:\temp\nwsq\servidores.txt"
 
-REM Caminho para o arquivo com a lista de servidores
-set "servidoresPath=C:\temp\nwsq\servidores.txt"
+# Nome do serviço a ser verificado
+$nomeServico = "xagt"
 
-REM Nome do serviço a ser verificado
-set "nomeServico=xagt"
+# Verificar se o arquivo existe
+if (-Not (Test-Path -Path $servidoresPath)) {
+    Write-Host "Arquivo de servidores não encontrado em $servidoresPath" -ForegroundColor Red
+    exit
+}
 
-REM Verificar se o arquivo existe
-if not exist "%servidoresPath%" (
-    echo Arquivo de servidores nao encontrado em %servidoresPath%
-    exit /b 1
-)
+# Ler a lista de servidores
+$servidores = Get-Content -Path $servidoresPath
 
-REM Inicializar o contador
-set /a contador=0
+# Inicializar o contador
+$contador = 0
 
-REM Ler a lista de servidores e verificar o status do serviço
-for /f "tokens=*" %%s in (%servidoresPath%) do (
-    REM Incrementar o contador
-    set /a contador+=1
+# Loop para verificar o status do serviço em cada servidor
+foreach ($servidor in $servidores) {
+    # Incrementar o contador
+    $contador++
 
-    REM Exibir o número do servidor
-    echo Verificando servidor !contador!: %%s
+    # Exibir o número do servidor
+    Write-Host "Verificando servidor $contador: $servidor"
 
-    REM Verificar se o servidor está acessível
-    ping -n 1 %%s >nul 2>&1
-    if errorlevel 1 (
-        echo !contador!: %%s: Nao foi possivel conectar ao servidor
-    ) else (
-        REM Obter status do serviço e salvar em um arquivo temporário
-        sc \\%%s query %nomeServico% > "%temp%\sc_query_!contador!.txt"
+    # Testar conexão com o servidor
+    if (Test-Connection -ComputerName $servidor -Count 1 -Quiet) {
+        try {
+            # Obter status do serviço
+            $statusServico = Get-Service -Name $nomeServico -ComputerName $servidor -ErrorAction Stop
 
-        REM Verificar se o serviço está rodando
-        findstr /i "STATE" "%temp%\sc_query_!contador!.txt" | findstr /i "RUNNING" >nul
-        if errorlevel 0 (
-            echo !contador!: %%s: %nomeServico% esta Running
-        ) else (
-            echo !contador!: %%s: %nomeServico% NAO esta Running
-        )
+            if ($statusServico.Status -eq 'Running') {
+                Write-Host "$contador: $servidor: $nomeServico está Running" -ForegroundColor Green
+            } else {
+                Write-Host "$contador: $servidor: $nomeServico NÃO está Running (Status: $($statusServico.Status))" -ForegroundColor Yellow
+            }
+        } catch {
+            # Captura erros e exibe mensagem apropriada
+            Write-Host "$contador: $servidor: Erro ao tentar verificar o serviço ($($_.Exception.Message))" -ForegroundColor Red
+        }
+    } else {
+        Write-Host "$contador: $servidor: Não foi possível conectar ao servidor" -ForegroundColor Red
+    }
+}
 
-        REM Limpar o arquivo temporário
-        del "%temp%\sc_query_!contador!.txt"
-    )
-)
-
-REM Pausa para manter a janela aberta
-pause
-
-endlocal
+# Pausa para manter a janela aberta
+Read-Host -Prompt "Pressione Enter para sair"
