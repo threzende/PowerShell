@@ -1,0 +1,63 @@
+$computers = Get-Content -Path "C:\temp\usuarios.txt"
+$domain = "leser.com"
+$password = "SuaSenha"  # Substitua "SuaSenhaAqui" pela sua senha
+$securePassword = ConvertTo-SecureString $password -AsPlainText -Force
+$credential = New-Object System.Management.Automation.PSCredential ("$domain\admin", $securePassword)
+
+# Função para registrar logs com cores
+function Write-Log {
+    param (
+        [string]$message,
+        [string]$color
+    )
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $logMessage = "$timestamp - $message"
+    Write-Host $logMessage -ForegroundColor $color
+}
+
+$scriptBlock = {
+    param ($computerName)
+
+    # Verifica se o processo do Chrome está em execução
+    $chromeRunning = Get-Process chrome -ErrorAction SilentlyContinue
+
+    if ($chromeRunning) {
+        $chromeStatus = "Chrome está em execução no computador $computerName."
+    } else {
+        $chromeStatus = "Chrome não está em execução no computador $computerName."
+    }
+
+    # Verifica se o Chrome está instalado
+    $chromePaths = @(
+        "C:\Program Files (x86)\Google\Chrome\Application",
+        "C:\Program Files\Google\Chrome\Application"
+    )
+    
+    $chromeInstalled = $false
+
+    foreach ($path in $chromePaths) {
+        if (Test-Path $path) {
+            $chromeInstalled = $true
+            break
+        }
+    }
+
+    if ($chromeInstalled) {
+        $installStatus = "Chrome está instalado no computador $computerName."
+    } else {
+        $installStatus = "Chrome não está instalado no computador $computerName."
+    }
+
+    Write-Output "$chromeStatus $installStatus"
+}
+
+foreach ($computer in $computers) {
+    if (Test-Connection -ComputerName $computer -Count 1 -Quiet) {
+        Write-Log "O computador $computer foi alcançado." "Green"
+        Invoke-Command -ComputerName $computer -ScriptBlock $scriptBlock -ArgumentList $computer -Credential $credential | ForEach-Object {
+            Write-Log $_ "Green"
+        }
+    } else {
+        Write-Log "O computador $computer está offline ou não pode ser alcançado." "Red"
+    }
+}
