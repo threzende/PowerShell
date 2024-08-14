@@ -8,3 +8,5 @@ whoami /groups
 adiciona a conta a um grupo de administradores
 net localgroup Administradores admintemp /add
 
+
+add
