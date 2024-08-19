@@ -1,11 +1,15 @@
-# Define a política de execução para Bypass
-Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
-
 # Função para verificar a presença do OLE DB e listar as versões
 function Get-OLEDBVersions {
     $oleDbRegistryPaths = @(
         "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\MSOLEDBSQL\CurrentVersion",
-        "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\MSOLEDBSQL18\CurrentVersion"
+        "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\MSOLEDBSQL17\CurrentVersion",
+        "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\MSOLEDBSQL18\CurrentVersion",
+        "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\MSOLEDBSQL19\CurrentVersion",
+        "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\MSOLEDBSQL16\CurrentVersion",
+        "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\MSOLEDBSQL15\CurrentVersion",
+        "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\MSOLEDBSQL14\CurrentVersion",
+        "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\MSOLEDBSQL13\CurrentVersion",
+        "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\MSOLEDBSQL12\CurrentVersion"
     )
 
     foreach ($path in $oleDbRegistryPaths) {
