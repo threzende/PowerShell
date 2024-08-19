@@ -1,30 +1,30 @@
 # Configura a política de execução para permitir a execução de scripts
 Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
 
-# Lista de servidores
-$servers = @("server01", "server02", "server03")
+# Nome do servidor remoto
+$server = "NomeDoServidor"  # Substitua "NomeDoServidor" pelo nome ou IP do servidor na sua rede
 
-# Função para obter o tempo de atividade do sistema
-function Get-SystemUptime {
+# Função para obter o tempo de atividade do sistema remoto
+function Get-RemoteSystemUptime {
     param (
         [string]$server
     )
 
     try {
-        # Tenta obter o tempo de inicialização do sistema
-        $bootTime = Get-CimInstance -ComputerName $server -ClassName win32_operatingsystem | Select-Object -ExpandProperty LastBootUpTime
+        # Executa o comando remotamente usando Invoke-Command
+        $bootTime = Invoke-Command -ComputerName $server -ScriptBlock {
+            (Get-CimInstance -ClassName win32_operatingsystem).LastBootUpTime
+        }
 
         # Calcula o tempo de atividade
         $uptime = (Get-Date) - $bootTime
 
         # Exibe o tempo de atividade formatado
-        Write-Output "System Uptime for $server: $($uptime.Days) days, $($uptime.Hours) hours, $($uptime.Minutes) minutes"
+        Write-Output ("System Uptime for {0}: {1} days, {2} hours, {3} minutes" -f $server, $uptime.Days, $uptime.Hours, $uptime.Minutes)
     } catch {
-        Write-Output "Failed to retrieve uptime for $server. Error: $($_.Exception.Message)"
+        Write-Output ("Failed to retrieve uptime for {0}. Error: {1}" -f $server, $_.Exception.Message)
     }
 }
 
-# Loop através da lista de servidores
-foreach ($server in $servers) {
-    Get-SystemUptime -server $server
-}
+# Executa a função para obter o uptime do servidor remoto
+Get-RemoteSystemUptime -server $server
