@@ -19,7 +19,7 @@ function Get-SystemBootTime {
         $bootTime = Get-CimInstance -CimSession $session -ClassName win32_operatingsystem | Select-Object -ExpandProperty LastBootUpTime
 
         # Exibe o tempo de inicialização formatado
-        Write-Output "System Boot Time for $server: $($bootTime.ToString('MM/dd/yyyy, hh:mm:ss tt'))"
+        Write-Output ("System Boot Time for {0}: {1}" -f $server, $bootTime.ToString('MM/dd/yyyy, hh:mm:ss tt'))
 
         # Remove a sessão CIM
         Remove-CimSession -CimSession $session
