@@ -1,4 +1,6 @@
-# Função para verificar a presença do OLE DB e listar as versões
+# Define a política de execução para Bypass
+Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
+
 function Get-OLEDBVersions {
     $oleDbRegistryPaths = @(
         "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\MSOLEDBSQL\CurrentVersion",
