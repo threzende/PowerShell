@@ -1,0 +1,17 @@
+# Define a política de execução para Bypass
+Set-ExecutionPolicy Bypass -Scope Process -Force
+
+# Nome da rede Wi-Fi (SSID)
+$wifiName = "CAM"
+
+# Conecta à rede Wi-Fi
+netsh wlan connect name=$wifiName
+
+# Verifica o status da conexão
+$connectionStatus = netsh wlan show interfaces | Select-String -Pattern "State"
+
+if ($connectionStatus -match "connected") {
+    Write-Output "Conectado à rede Wi-Fi com sucesso!"
+} else {
+    Write-Output "Falha ao conectar à rede Wi-Fi."
+}
