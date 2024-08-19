@@ -1,5 +1,0 @@
-RUN Comand | Computer Management (Gerenciamento do Computador):
-compmgmt.msc
-
-CMD | verificar os grupos que o usuário está:
-whoami /groups

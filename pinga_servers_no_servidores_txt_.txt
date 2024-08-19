@@ -1,0 +1,14 @@
+# Define a política de execução para Bypass
+Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
+
+# Caminho para o arquivo de texto com a lista de servidores
+$servidores = Get-Content -Path "C:\temp\servers.txt"
+
+foreach ($servidor in $servidores) {
+    $resultado = Test-Connection -ComputerName $servidor -Count 1 -Quiet
+    if ($resultado) {
+        Write-Host "$servidor UP" -ForegroundColor Green
+    } else {
+        Write-Host "$servidor DOWN" -ForegroundColor Red
+    }
+}

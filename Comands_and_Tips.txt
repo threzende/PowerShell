@@ -1,0 +1,48 @@
+RUN Comand | Computer Management (Gerenciamento do Computador):
+compmgmt.msc
+
+CMD | verificar os grupos que o usuário está:
+whoami /groups
+
+
+adiciona a conta a um grupo de administradores
+net localgroup Administradores admintemp /add
+
+
+testar o usuário admin
+runas /user:admintemp cmd
+
+
+Abre o local onde vai para o pagefile
+sysdm.cpl
+
+
+reset forced
+shutdown /r /f /t 0
+
+control alt del do rdp
+control+ald+end
+
+users loged in
+quser
+quser "number" to logoff the user
+
+Transcript
+Start-Transcript -Path "C:\temp\log1.txt" -Append
+Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy Restricted -Force
+Stop-Transcript
+
+
+Check programs instaled power shell
+Get-WmiObject -Class Win32_Product | Where-Object { $_.Name -like "*Symantec Endpoint*" }
+CMD
+sc query | findstr /i "Symantec"
+
+para saber se esta rodando via CMD
+tasklist | findstr /i "Symantec" *obs: O I transforma ele em case insensitive
+Verifica no PowerShell
+Get-Process -Name "ccSvcHst"
+Get-Service | Where-Object { $_.DisplayName -like "*Symantec*" -and $_.Status -eq "Running" }
+
+
+
