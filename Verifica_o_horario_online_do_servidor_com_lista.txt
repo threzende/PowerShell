@@ -28,7 +28,7 @@ function Get-RemoteSystemUptime {
             $uptime = (Get-Date) - $bootTime
 
             # Exibe o tempo de atividade formatado em verde
-            $uptimeMessage = "System Uptime for $server: $($uptime.Days) days, $($uptime.Hours) hours, $($uptime.Minutes) minutes"
+            $uptimeMessage = "System Uptime for $server : $($uptime.Days) days, $($uptime.Hours) hours, $($uptime.Minutes) minutes"
             Write-Host $uptimeMessage -ForegroundColor Green
         } else {
             Write-Host ("Failed to retrieve a valid LastBootUpTime from {0}" -f $server) -ForegroundColor Red
