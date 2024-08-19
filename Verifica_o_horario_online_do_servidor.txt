@@ -13,14 +13,25 @@ function Get-RemoteSystemUptime {
     try {
         # Executa o comando remotamente usando Invoke-Command
         $bootTime = Invoke-Command -ComputerName $server -ScriptBlock {
-            (Get-CimInstance -ClassName win32_operatingsystem).LastBootUpTime
+            # Verifica se o comando retornou um valor válido
+            $os = Get-CimInstance -ClassName win32_operatingsystem
+            if ($os -ne $null) {
+                return $os.LastBootUpTime
+            } else {
+                throw "Failed to get operating system instance."
+            }
         }
 
-        # Calcula o tempo de atividade
-        $uptime = (Get-Date) - $bootTime
+        # Verifica se $bootTime é um valor de data e hora válido
+        if ($bootTime -is [DateTime]) {
+            # Calcula o tempo de atividade
+            $uptime = (Get-Date) - $bootTime
 
-        # Exibe o tempo de atividade formatado
-        Write-Output ("System Uptime for {0}: {1} days, {2} hours, {3} minutes" -f $server, $uptime.Days, $uptime.Hours, $uptime.Minutes)
+            # Exibe o tempo de atividade formatado
+            Write-Output ("System Uptime for {0}: {1} days, {2} hours, {3} minutes" -f $server, $uptime.Days, $uptime.Hours, $uptime.Minutes)
+        } else {
+            Write-Output ("Failed to retrieve a valid LastBootUpTime from {0}" -f $server)
+        }
     } catch {
         Write-Output ("Failed to retrieve uptime for {0}. Error: {1}" -f $server, $_.Exception.Message)
     }
