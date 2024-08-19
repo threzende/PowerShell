@@ -31,3 +31,10 @@ Transcript
 Start-Transcript -Path "C:\temp\log1.txt" -Append
 Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy Restricted -Force
 Stop-Transcript
+
+
+Check programs instaled power shell
+Get-WmiObject -Class Win32_Product | Where-Object { $_.Name -like "*Symantec Endpoint*" }
+CMD
+sc query | findstr /i "Symantec"
+
