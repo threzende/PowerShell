@@ -24,7 +24,7 @@ function Get-SystemBootTime {
         # Remove a sessão CIM
         Remove-CimSession -CimSession $session
     } catch {
-        Write-Output "Failed to retrieve boot time for $server: $_"
+        Write-Output ("Failed to retrieve boot time for {0}: {1}" -f $server, $_)
     }
 }
 
