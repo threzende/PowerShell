@@ -1,1 +1,19 @@
-PowerShell -ExecutionPolicy Bypass -File C:\caminho\para\verificar_servico_xagt.ps1
+# Função para verificar a presença do OLE DB e listar as versões
+function Get-OLEDBVersions {
+    $oleDbRegistryPaths = @(
+        "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\MSOLEDBSQL\CurrentVersion",
+        "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\MSOLEDBSQL18\CurrentVersion"
+    )
+
+    foreach ($path in $oleDbRegistryPaths) {
+        if (Test-Path $path) {
+            $version = Get-ItemProperty -Path $path -Name Version
+            Write-Output "Provider encontrado em $path com versão: $($version.Version)"
+        } else {
+            Write-Output "Provider não encontrado em $path"
+        }
+    }
+}
+
+# Executar a função
+Get-OLEDBVersions
