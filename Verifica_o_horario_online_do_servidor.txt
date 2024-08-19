@@ -1,3 +1,6 @@
+# Configura a política de execução para permitir a execução de scripts
+Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
+
 # Lista de servidores
 $servers = @("server01", "server02", "server03")
 
@@ -6,11 +9,22 @@ function Get-SystemBootTime {
     param (
         [string]$server
     )
+
     try {
-        $bootTime = Get-CimInstance -ComputerName $server -ClassName win32_operatingsystem | Select-Object -ExpandProperty LastBootUpTime
+        # Tenta estabelecer uma sessão CIM no servidor remoto
+        $sessionOptions = New-CimSessionOption -UseSsl -SkipCACheck -SkipCNCheck -SkipRevocationCheck
+        $session = New-CimSession -ComputerName $server -SessionOption $sessionOptions
+
+        # Obtém a instância CIM para o Win32_OperatingSystem
+        $bootTime = Get-CimInstance -CimSession $session -ClassName win32_operatingsystem | Select-Object -ExpandProperty LastBootUpTime
+
+        # Exibe o tempo de inicialização formatado
         Write-Output "System Boot Time for $server: $($bootTime.ToString('MM/dd/yyyy, hh:mm:ss tt'))"
+
+        # Remove a sessão CIM
+        Remove-CimSession -CimSession $session
     } catch {
-        Write-Output "Failed to retrieve boot time for $server"
+        Write-Output "Failed to retrieve boot time for $server: $_"
     }
 }
 
