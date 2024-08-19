@@ -1,28 +1,16 @@
-# Define a política de execução para Bypass
-Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
+# Caminho do arquivo com a lista de servidores
+$serversList = "C:\temp\servers.txt"
 
-function Get-OLEDBVersions {
-    $oleDbRegistryPaths = @(
-        "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\MSOLEDBSQL\CurrentVersion",
-        "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\MSOLEDBSQL17\CurrentVersion",
-        "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\MSOLEDBSQL18\CurrentVersion",
-        "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\MSOLEDBSQL19\CurrentVersion",
-        "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\MSOLEDBSQL16\CurrentVersion",
-        "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\MSOLEDBSQL15\CurrentVersion",
-        "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\MSOLEDBSQL14\CurrentVersion",
-        "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\MSOLEDBSQL13\CurrentVersion",
-        "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\MSOLEDBSQL12\CurrentVersion"
-    )
+# Ler a lista de servidores
+$servers = Get-Content -Path $serversList
 
-    foreach ($path in $oleDbRegistryPaths) {
-        if (Test-Path $path) {
-            $version = Get-ItemProperty -Path $path -Name Version
-            Write-Output "Provider encontrado em $path com versão: $($version.Version)"
-        } else {
-            Write-Output "Provider não encontrado em $path"
-        }
+# Loop para reiniciar cada servidor
+foreach ($server in $servers) {
+    try {
+        Write-Host "Reiniciando o servidor: $server"
+        Restart-Computer -ComputerName $server -Force -ErrorAction Stop
+        Write-Host "Servidor $server reiniciado com sucesso."
+    } catch {
+        Write-Host "Falha ao reiniciar o servidor: $server. Erro: $_"
     }
 }
-
-# Executar a função
-Get-OLEDBVersions

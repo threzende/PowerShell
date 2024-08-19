@@ -1,0 +1,28 @@
+# Define a política de execução para Bypass
+Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
+
+function Get-OLEDBVersions {
+    $oleDbRegistryPaths = @(
+        "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\MSOLEDBSQL\CurrentVersion",
+        "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\MSOLEDBSQL17\CurrentVersion",
+        "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\MSOLEDBSQL18\CurrentVersion",
+        "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\MSOLEDBSQL19\CurrentVersion",
+        "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\MSOLEDBSQL16\CurrentVersion",
+        "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\MSOLEDBSQL15\CurrentVersion",
+        "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\MSOLEDBSQL14\CurrentVersion",
+        "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\MSOLEDBSQL13\CurrentVersion",
+        "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\MSOLEDBSQL12\CurrentVersion"
+    )
+
+    foreach ($path in $oleDbRegistryPaths) {
+        if (Test-Path $path) {
+            $version = Get-ItemProperty -Path $path -Name Version
+            Write-Output "Provider encontrado em $path com versão: $($version.Version)"
+        } else {
+            Write-Output "Provider não encontrado em $path"
+        }
+    }
+}
+
+# Executar a função
+Get-OLEDBVersions
