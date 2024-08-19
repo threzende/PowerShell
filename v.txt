@@ -1,0 +1,43 @@
+# Configura a política de execução para permitir a execução de scripts
+Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
+
+# Lista de servidores
+$servers = @("server01", "server02", "server03")  # Substitua pelos nomes ou IPs dos seus servidores
+
+# Função para obter o tempo de atividade do sistema remoto
+function Get-RemoteSystemUptime {
+    param (
+        [string]$server
+    )
+
+    try {
+        # Executa o comando remotamente usando Invoke-Command
+        $bootTime = Invoke-Command -ComputerName $server -ScriptBlock {
+            # Verifica se o comando retornou um valor válido
+            $os = Get-CimInstance -ClassName win32_operatingsystem
+            if ($os -ne $null) {
+                return $os.LastBootUpTime
+            } else {
+                throw "Failed to get operating system instance."
+            }
+        }
+
+        # Verifica se $bootTime é um valor de data e hora válido
+        if ($bootTime -is [DateTime]) {
+            # Calcula o tempo de atividade
+            $uptime = (Get-Date) - $bootTime
+
+            # Exibe o tempo de atividade formatado em verde
+            Write-Host ("System Uptime for {0}: {1} days, {2} hours, {3} minutes" -f $server, $uptime.Days, $uptime.Hours, $uptime.Minutes) -ForegroundColor Green
+        } else {
+            Write-Host ("Failed to retrieve a valid LastBootUpTime from {0}" -f $server) -ForegroundColor Red
+        }
+    } catch {
+        Write-Host ("Failed to retrieve uptime for {0}. Error: {1}" -f $server, $_.Exception.Message) -ForegroundColor Red
+    }
+}
+
+# Loop através da lista de servidores
+foreach ($server in $servers) {
+    Get-RemoteSystemUptime -server $server
+}
