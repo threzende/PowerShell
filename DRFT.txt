@@ -1,3 +1,6 @@
+# Define a política de execução para Bypass
+Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
+
 # Função para verificar a presença do OLE DB e listar as versões
 function Get-OLEDBVersions {
     $oleDbRegistryPaths = @(
