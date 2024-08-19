@@ -39,8 +39,9 @@ CMD
 sc query | findstr /i "Symantec"
 
 para saber se esta rodando via CMD
-tasklist | findstr /i "Symantec"
+tasklist | findstr /i "Symantec" *obs: O I transforma ele em case insensitive
 Verifica no PowerShell
+Get-Process -Name "ccSvcHst"
 Get-Service | Where-Object { $_.DisplayName -like "*Symantec*" -and $_.Status -eq "Running" }
 
 
