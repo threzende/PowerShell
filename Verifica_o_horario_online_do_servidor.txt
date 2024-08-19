@@ -1,8 +1,8 @@
 # Configura a política de execução para permitir a execução de scripts
 Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
 
-# Nome do servidor remoto
-$server = "NomeDoServidor"  # Substitua "NomeDoServidor" pelo nome ou IP do servidor na sua rede
+# Caminho do arquivo contendo a lista de servidores
+$serversFilePath = "C:\temp\servers.txt"
 
 # Função para obter o tempo de atividade do sistema remoto
 function Get-RemoteSystemUptime {
@@ -27,15 +27,26 @@ function Get-RemoteSystemUptime {
             # Calcula o tempo de atividade
             $uptime = (Get-Date) - $bootTime
 
-            # Exibe o tempo de atividade formatado
-            Write-Output ("System Uptime for {0}: {1} days, {2} hours, {3} minutes" -f $server, $uptime.Days, $uptime.Hours, $uptime.Minutes)
+            # Exibe o tempo de atividade formatado em verde
+            $uptimeMessage = "System Uptime for $server: $($uptime.Days) days, $($uptime.Hours) hours, $($uptime.Minutes) minutes"
+            Write-Host $uptimeMessage -ForegroundColor Green
         } else {
-            Write-Output ("Failed to retrieve a valid LastBootUpTime from {0}" -f $server)
+            Write-Host ("Failed to retrieve a valid LastBootUpTime from {0}" -f $server) -ForegroundColor Red
         }
     } catch {
-        Write-Output ("Failed to retrieve uptime for {0}. Error: {1}" -f $server, $_.Exception.Message)
+        Write-Host ("Failed to retrieve uptime for {0}. Error: {1}" -f $server, $_.Exception.Message) -ForegroundColor Red
     }
 }
 
-# Executa a função para obter o uptime do servidor remoto
-Get-RemoteSystemUptime -server $server
+# Verifica se o arquivo de servidores existe
+if (Test-Path $serversFilePath) {
+    # Lê a lista de servidores do arquivo
+    $servers = Get-Content -Path $serversFilePath
+
+    # Loop através da lista de servidores
+    foreach ($server in $servers) {
+        Get-RemoteSystemUptime -server $server.Trim()  # Remove espaços em branco ao redor do nome do servidor
+    }
+} else {
+    Write-Host "Servers file not found: $serversFilePath" -ForegroundColor Red
+}
