@@ -38,3 +38,10 @@ Get-WmiObject -Class Win32_Product | Where-Object { $_.Name -like "*Symantec End
 CMD
 sc query | findstr /i "Symantec"
 
+para saber se esta rodando via CMD
+tasklist | findstr /i "Symantec"
+Verifica no PowerShell
+Get-Service | Where-Object { $_.DisplayName -like "*Symantec*" -and $_.Status -eq "Running" }
+
+
+
