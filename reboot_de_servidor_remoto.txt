@@ -1,0 +1,81 @@
+# Defina a lista de servidores
+$servers = @("Servidor1", "Servidor2", "Servidor3")
+
+# Caminho para o arquivo de log
+$logFile = "C:\Logs\ServerRebootLog.txt"
+
+# Função para registrar eventos no arquivo de log
+function Log-Event {
+    param (
+        [string]$message
+    )
+    Add-Content -Path $logFile -Value "$(Get-Date) - $message"
+}
+
+# Função para exibir mensagem com cores
+function Show-Status {
+    param (
+        [string]$server,
+        [bool]$status
+    )
+    if ($status) {
+        Write-Host "$server voltou online." -ForegroundColor Green
+    } else {
+        Write-Host "$server está offline." -ForegroundColor Red
+    }
+}
+
+# Função para verificar o status e registrar o log
+function Check-Servers {
+    param (
+        [string[]]$serverList
+    )
+    $onlineCount = 0
+    foreach ($server in $serverList) {
+        $isOnline = Test-Connection -ComputerName $server -Count 1 -Quiet
+        Show-Status -server $server -status $isOnline
+        
+        if ($isOnline) {
+            $onlineCount++
+        }
+    }
+    return $onlineCount
+}
+
+# Verificar conectividade e reiniciar servidores
+foreach ($server in $servers) {
+    if (Test-Connection -ComputerName $server -Count 2 -Quiet) {
+        try {
+            # Reiniciar o servidor
+            Restart-Computer -ComputerName $server -Force -ErrorAction Stop
+            Log-Event "Reinicialização iniciada para $server."
+        } catch {
+            Log-Event "Falha ao reiniciar $server: $_"
+        }
+    } else {
+        Log-Event "O servidor $server não está acessível."
+    }
+}
+
+# Monitoramento contínuo com ping alternado
+while ($true) {
+    $onlineCount = 0
+    while ($onlineCount -lt $servers.Length) {
+        foreach ($server in $servers) {
+            $isOnline = Test-Connection -ComputerName $server -Count 1 -Quiet
+            Show-Status -server $server -status $isOnline
+            
+            if ($isOnline) {
+                $onlineCount++
+            }
+            Start-Sleep -Seconds 1
+        }
+
+        # Se todos os servidores estiverem online, pare o monitoramento
+        if ($onlineCount -ge $servers.Length) {
+            Write-Host "Todos os servidores estão online. Monitoramento concluído." -ForegroundColor Green
+            break
+        }
+    }
+    Start-Sleep -Seconds 10
+}
