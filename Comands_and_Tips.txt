@@ -46,3 +46,10 @@ Get-Service | Where-Object { $_.DisplayName -like "*Symantec*" -and $_.Status -e
 
 
 
+Verificar processos em execução
+Via CMD sc quer 'o nome do serviço no windows service.msc -sem aspas'
+Via PowerShell Get-Service -Name "nome do serviço no windows service.msc -com ou sem apas"
+
+
+
+
