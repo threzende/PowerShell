@@ -1,0 +1,21 @@
+# Define o caminho para o arquivo de servidores
+$servers = Get-Content -Path "C:\temp\servers.txt"
+
+# Script a ser executado remotamente
+$scriptBlock = {
+    taskkill /F /FI "SERVICES eq wuauserv"
+    taskkill /F /FI "SERVICES eq CryptSvc"
+    Start-Transcript -Path "C:\temp\CB_FIX_LOG.txt" -Append
+    Stop-Service -Name "wuauserv" -Force -Verbose
+    Stop-Service -Name "CryptSvc" -Force -Verbose
+    Start-Service -Name "wuauserv" -Verbose
+    Start-Service -Name "CryptSvc" -Verbose
+    Get-Service -Name "wuauserv" -Verbose
+    Get-Service -Name "CryptSvc" -Verbose
+    Stop-Transcript
+}
+
+# Executa o script em cada servidor
+foreach ($server in $servers) {
+    Invoke-Command -ComputerName $server -ScriptBlock $scriptBlock
+}
