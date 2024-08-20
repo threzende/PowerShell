@@ -1,0 +1,126 @@
+# Caminho para o arquivo de servidores
+$serverListFile = "C:\temp\servers.txt"
+
+# Definir a lista de servidores a partir do arquivo
+if (Test-Path $serverListFile) {
+    $servers = Get-Content -Path $serverListFile
+} else {
+    Write-Host "Arquivo de lista de servidores não encontrado: $serverListFile" -ForegroundColor Red
+    exit
+}
+
+# Caminho para o arquivo de log
+$logFile = "C:\Logs\ServerRebootLog.txt"
+
+# Função para registrar eventos no arquivo de log
+function Log-Event {
+    param (
+        [string]$message
+    )
+    Add-Content -Path $logFile -Value "$(Get-Date) - $message"
+}
+
+# Função para exibir mensagem com cores
+function Show-Status {
+    param (
+        [string]$server,
+        [bool]$status
+    )
+    if ($status) {
+        Write-Host "$server voltou online." -ForegroundColor Green
+    } else {
+        Write-Host "$server está offline." -ForegroundColor Red
+    }
+}
+
+# Função para verificar o status e registrar o log
+function Check-Servers {
+    param (
+        [string[]]$serverList
+    )
+    $onlineCount = 0
+    foreach ($server in $serverList) {
+        $isOnline = Test-Connection -ComputerName $server -Count 1 -Quiet
+        Show-Status -server $server -status $isOnline
+        
+        if ($isOnline) {
+            $onlineCount++
+        }
+    }
+    return $onlineCount
+}
+
+# Função para verificar a conectividade e reiniciar servidores
+function Restart-Servers {
+    param (
+        [string[]]$serverList
+    )
+    # Definir a política de execução como Bypass para o tempo de execução do script
+    $ExecutionPolicyBackup = Get-ExecutionPolicy
+    Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+
+    try {
+        foreach ($server in $serverList) {
+            if (Test-Connection -ComputerName $server -Count 2 -Quiet) {
+                try {
+                    # Reiniciar o servidor usando shutdown
+                    Invoke-Command -ComputerName $server -ScriptBlock {
+                        shutdown /r /f /t 0
+                    } -ErrorAction Stop
+                    Log-Event "Reinicialização forçada iniciada para $server."
+                } catch {
+                    Log-Event "Falha ao reiniciar $server: $_"
+                }
+            } else {
+                Log-Event "O servidor $server não está acessível."
+            }
+        }
+    }
+    finally {
+        # Restaurar a política de execução original
+        Set-ExecutionPolicy -Scope Process -ExecutionPolicy $ExecutionPolicyBackup -Force
+    }
+}
+
+# Função para monitorar servidores com limite de tentativas
+function Monitor-Servers {
+    param (
+        [string[]]$serverList,
+        [int]$maxAttempts = 5
+    )
+
+    $failedServers = @{}
+    foreach ($server in $serverList) {
+        $failedServers[$server] = 0
+    }
+
+    while ($failedServers.Keys.Count -gt 0) {
+        foreach ($server in $failedServers.Keys) {
+            $isOnline = Test-Connection -ComputerName $server -Count 1 -Quiet
+
+            if ($isOnline) {
+                Show-Status -server $server -status $isOnline
+                # Se o servidor voltar a ficar online, remova da lista de falhados
+                $failedServers.Remove($server)
+            } else {
+                $failedServers[$server]++
+                Show-Status -server $server -status $isOnline
+                if ($failedServers[$server] -ge $maxAttempts) {
+                    Log-Event "O servidor $server está offline há $maxAttempts tentativas."
+                    $failedServers.Remove($server)
+                }
+            }
+            Start-Sleep -Seconds 1
+        }
+
+        # Se ainda houver servidores para monitorar, continue o loop
+        if ($failedServers.Count -gt 0) {
+            Start-Sleep -Seconds 10
+        }
+    }
+
+    Write-Host "Todos os servidores foram monitorados. Monitoramento concluído." -ForegroundColor Green
+}
+
+# Reiniciar servidores e monitorar o status
+Restart-Servers -serverL
