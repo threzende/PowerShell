@@ -1,0 +1,21 @@
+@echo off
+rem Finaliza os serviços wuauserv e CryptSvc, se estiverem em execução
+taskkill /F /FI "SERVICES eq wuauserv"
+taskkill /F /FI "SERVICES eq CryptSvc"
+
+rem Para os serviços wuauserv e CryptSvc
+net stop wuauserv /y
+net stop CryptSvc /y
+
+rem Renomeia a pasta catroot2
+rename %windir%\system32\catroot2 catroot2_.bak
+
+rem Inicia os serviços wuauserv e CryptSvc
+net start wuauserv
+net start CryptSvc
+
+rem Exibe o status dos serviços
+sc query wuauserv
+sc query CryptSvc
+
+pause
