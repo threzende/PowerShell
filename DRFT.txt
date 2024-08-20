@@ -42,42 +42,52 @@ function Check-Servers {
     return $onlineCount
 }
 
-# Verificar conectividade e reiniciar servidores
-foreach ($server in $servers) {
-    if (Test-Connection -ComputerName $server -Count 2 -Quiet) {
-        try {
-            # Reiniciar o servidor usando shutdown
-            Invoke-Command -ComputerName $server -ScriptBlock {
-                shutdown /r /f /t 0
-            } -ErrorAction Stop
-            Log-Event "Reinicialização iniciada para $server."
-        } catch {
-            Log-Event "Falha ao reiniciar $server: $_"
+# Definir a política de execução como Bypass para o tempo de execução do script
+$ExecutionPolicyBackup = Get-ExecutionPolicy
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+
+try {
+    # Verificar conectividade e reiniciar servidores
+    foreach ($server in $servers) {
+        if (Test-Connection -ComputerName $server -Count 2 -Quiet) {
+            try {
+                # Reiniciar o servidor usando shutdown
+                Invoke-Command -ComputerName $server -ScriptBlock {
+                    shutdown /r /f /t 0
+                } -ErrorAction Stop
+                Log-Event "Reinicialização forçada iniciada para $server."
+            } catch {
+                Log-Event "Falha ao reiniciar $server: $_"
+            }
+        } else {
+            Log-Event "O servidor $server não está acessível."
         }
-    } else {
-        Log-Event "O servidor $server não está acessível."
+    }
+
+    # Monitoramento contínuo com ping alternado
+    while ($true) {
+        $onlineCount = 0
+        while ($onlineCount -lt $servers.Length) {
+            foreach ($server in $servers) {
+                $isOnline = Test-Connection -ComputerName $server -Count 1 -Quiet
+                Show-Status -server $server -status $isOnline
+                
+                if ($isOnline) {
+                    $onlineCount++
+                }
+                Start-Sleep -Seconds 1
+            }
+
+            # Se todos os servidores estiverem online, pare o monitoramento
+            if ($onlineCount -ge $servers.Length) {
+                Write-Host "Todos os servidores estão online. Monitoramento concluído." -ForegroundColor Green
+                break
+            }
+        }
+        Start-Sleep -Seconds 10
     }
 }
-
-# Monitoramento contínuo com ping alternado
-while ($true) {
-    $onlineCount = 0
-    while ($onlineCount -lt $servers.Length) {
-        foreach ($server in $servers) {
-            $isOnline = Test-Connection -ComputerName $server -Count 1 -Quiet
-            Show-Status -server $server -status $isOnline
-            
-            if ($isOnline) {
-                $onlineCount++
-            }
-            Start-Sleep -Seconds 1
-        }
-
-        # Se todos os servidores estiverem online, pare o monitoramento
-        if ($onlineCount -ge $servers.Length) {
-            Write-Host "Todos os servidores estão online. Monitoramento concluído." -ForegroundColor Green
-            break
-        }
-    }
-    Start-Sleep -Seconds 10
+finally {
+    # Restaurar a política de execução original
+    Set-ExecutionPolicy -Scope Process -ExecutionPolicy $ExecutionPolicyBackup -Force
 }
