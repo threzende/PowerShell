@@ -51,5 +51,8 @@ Via CMD sc quer 'o nome do serviço no windows service.msc -sem aspas'
 Via PowerShell Get-Service -Name "nome do serviço no windows service.msc -com ou sem apas"
 
 
+Enable-PSRemoting -Force
+
+
 
 

@@ -1,0 +1,9 @@
+ok fazer | nome | onde executa | quantidade | se for fora do padrão L ou P
+
+ver_nome_loc_01
+
+exec_reboot_rem_5
+
+exec_reboot_rem_99
+
+ver_chrome_installed_rem_99_L
