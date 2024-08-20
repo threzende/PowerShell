@@ -1,0 +1,90 @@
+# Define o caminho para o arquivo de servidores
+$servers = Get-Content -Path "C:\temp\servers.txt"
+
+# Executa o script em cada servidor
+foreach ($server in $servers) {
+    $transcriptLogFile = "C:\temp\CB_FIX_TRANSCRIPT_$server.txt"
+    $stepByStepLogFile = "C:\temp\CB_FIX_LOG_$server.txt"
+    
+    $scriptBlock = {
+        param($transcriptLogFile, $stepByStepLogFile)
+
+        Start-Transcript -Path $transcriptLogFile -Append
+        
+        try {
+            # Taskkill wuauserv
+            taskkill /F /FI "SERVICES eq wuauserv"
+            if ($?) {
+                Add-Content -Path $stepByStepLogFile -Value "$(Get-Date): Stopped wuauserv successfully"
+            } else {
+                Add-Content -Path $stepByStepLogFile -Value "$(Get-Date): Failed to stop wuauserv"
+            }
+
+            # Taskkill CryptSvc
+            taskkill /F /FI "SERVICES eq CryptSvc"
+            if ($?) {
+                Add-Content -Path $stepByStepLogFile -Value "$(Get-Date): Stopped CryptSvc successfully"
+            } else {
+                Add-Content -Path $stepByStepLogFile -Value "$(Get-Date): Failed to stop CryptSvc"
+            }
+
+            # Stop-Service wuauserv
+            Stop-Service -Name "wuauserv" -Force -Verbose
+            if ($?) {
+                Add-Content -Path $stepByStepLogFile -Value "$(Get-Date): Stopped service wuauserv successfully"
+            } else {
+                Add-Content -Path $stepByStepLogFile -Value "$(Get-Date): Failed to stop service wuauserv"
+            }
+
+            # Stop-Service CryptSvc
+            Stop-Service -Name "CryptSvc" -Force -Verbose
+            if ($?) {
+                Add-Content -Path $stepByStepLogFile -Value "$(Get-Date): Stopped service CryptSvc successfully"
+            } else {
+                Add-Content -Path $stepByStepLogFile -Value "$(Get-Date): Failed to stop service CryptSvc"
+            }
+
+            # Rename catroot2 folder
+            Rename-Item -Path "C:\Windows\system32\catroot2" -NewName "catroot2_.bak" -Verbose
+            if ($?) {
+                Add-Content -Path $stepByStepLogFile -Value "$(Get-Date): Renamed catroot2 to catroot2_.bak successfully"
+            } else {
+                Add-Content -Path $stepByStepLogFile -Value "$(Get-Date): Failed to rename catroot2 to catroot2_.bak"
+            }
+
+            # Start-Service wuauserv
+            Start-Service -Name "wuauserv" -Verbose
+            if ($?) {
+                Add-Content -Path $stepByStepLogFile -Value "$(Get-Date): Started service wuauserv successfully"
+            } else {
+                Add-Content -Path $stepByStepLogFile -Value "$(Get-Date): Failed to start service wuauserv"
+            }
+
+            # Start-Service CryptSvc
+            Start-Service -Name "CryptSvc" -Verbose
+            if ($?) {
+                Add-Content -Path $stepByStepLogFile -Value "$(Get-Date): Started service CryptSvc successfully"
+            } else {
+                Add-Content -Path $stepByStepLogFile -Value "$(Get-Date): Failed to start service CryptSvc"
+            }
+
+            # Get-Service wuauserv
+            $wuService = Get-Service -Name "wuauserv"
+            Add-Content -Path $stepByStepLogFile -Value "$(Get-Date): wuauserv status - $($wuService.Status)"
+
+            # Get-Service CryptSvc
+            $cryptService = Get-Service -Name "CryptSvc"
+            Add-Content -Path $stepByStepLogFile -Value "$(Get-Date): CryptSvc status - $($cryptService.Status)"
+            
+        } catch {
+            Add-Content -Path $stepByStepLogFile -Value "$(Get-Date): Error encountered - $_"
+        }
+
+        Add-Content -Path $stepByStepLogFile -Value "$(Get-Date): Script execution completed"
+        
+        Stop-Transcript
+    }
+
+    # Executa o script no servidor remoto e passa os caminhos dos logs como parâmetros
+    Invoke-Command -ComputerName $server -ScriptBlock $scriptBlock -ArgumentList $transcriptLogFile, $stepByStepLogFile
+}
