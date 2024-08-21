@@ -1,0 +1,35 @@
+# Define o caminho do arquivo com a lista de servidores
+$serversFile = "$PSScriptRoot\servers.txt"
+
+# Define o caminho do arquivo de log
+$logFile = "$PSScriptRoot\log.txt"
+
+# Lê a lista de servidores do arquivo
+$servers = Get-Content -Path $serversFile
+
+# Define o caminho da pasta que queremos verificar
+$folderToCheck = "c$\windows\system32\catroot2_.bak"
+
+# Cria ou limpa o arquivo de log
+Out-File -FilePath $logFile -Force -InputObject "Início do Log: $(Get-Date)" 
+
+# Loop para verificar cada servidor
+foreach ($server in $servers) {
+    # Define o caminho UNC para o servidor
+    $uncPath = "\\$server\$folderToCheck"
+    
+    # Verifica se a pasta existe
+    if (Test-Path -Path $uncPath) {
+        $message = "A pasta $folderToCheck foi encontrada em \\$server."
+        Write-Host $message -ForegroundColor Green
+    } else {
+        $message = "A pasta $folderToCheck NÃO foi encontrada em \\$server."
+        Write-Host $message -ForegroundColor Red
+    }
+    
+    # Escreve a mensagem no arquivo de log
+    $message | Out-File -FilePath $logFile -Append
+}
+
+# Adiciona uma linha de encerramento no log
+"Fim do Log: $(Get-Date)" | Out-File -FilePath $logFile -Append
