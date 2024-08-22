@@ -1,0 +1,68 @@
+# Define o caminho do arquivo com a lista de servidores
+$serversFile = "$PSScriptRoot\servers.txt"
+
+# Define o caminho do arquivo de log
+$logFile = "$PSScriptRoot\log.txt"
+
+# Lê a lista de servidores do arquivo
+$servers = Get-Content -Path $serversFile
+
+# Define os caminhos das pastas que queremos verificar
+$foldersToCheck = @("c$\windows\system32\catroot", "c$\windows\system32\catroot2", "c$\windows\system32\catroot2_.bak", "c$\windows\system32\catroot3_.bak")
+
+# Cria ou limpa o arquivo de log
+Out-File -FilePath $logFile -Force -InputObject "Início do Log: $(Get-Date)" 
+
+# Loop para verificar cada servidor
+foreach ($server in $servers) {
+    $messages = @()
+    
+    foreach ($folder in $foldersToCheck) {
+        # Define o caminho UNC para o servidor
+        $uncPath = "\\$server\$folder"
+        
+        # Verifica se a pasta existe
+        if (Test-Path -Path $uncPath) {
+            $message = "A pasta $folder foi encontrada em \\$server."
+            Write-Host $message -ForegroundColor Green
+            $messages += $message
+        } else {
+            $message = "A pasta $folder NÃO foi encontrada em \\$server."
+            Write-Host $message -ForegroundColor Red
+            $messages += $message
+        }
+    }
+    
+    # Executa os comandos apropriados dependendo da existência da pasta catroot2_.bak
+    if (Test-Path -Path "\\$server\c$\windows\system32\catroot2_.bak") {
+        Invoke-Command -ComputerName $server -ScriptBlock {
+            taskkill /F /FI "SERVICES eq wuauserv"
+            taskkill /F /FI "SERVICES eq CryptSvc"
+            Stop-Service -Name "wuauserv" -Force -Verbose
+            Stop-Service -Name "CryptSvc" -Force -Verbose
+            Rename-Item -Path "C:\Windows\System32\catroot2" -NewName "catroot3_.bak" -Verbose
+            Start-Service -Name "wuauserv" -Verbose
+            Start-Service -Name "CryptSvc" -Verbose
+            Get-Service -Name "wuauserv" -Verbose
+            Get-Service -Name "CryptSvc" -Verbose
+        }
+    } else {
+        Invoke-Command -ComputerName $server -ScriptBlock {
+            taskkill /F /FI "SERVICES eq wuauserv"
+            taskkill /F /FI "SERVICES eq CryptSvc"
+            Stop-Service -Name "wuauserv" -Force -Verbose
+            Stop-Service -Name "CryptSvc" -Force -Verbose
+            Rename-Item -Path "C:\Windows\System32\catroot2" -NewName "catroot2_.bak" -Verbose
+            Start-Service -Name "wuauserv" -Verbose
+            Start-Service -Name "CryptSvc" -Verbose
+            Get-Service -Name "wuauserv" -Verbose
+            Get-Service -Name "CryptSvc" -Verbose
+        }
+    }
+    
+    # Escreve as mensagens no arquivo de log
+    $messages | Out-File -FilePath $logFile -Append
+}
+
+# Adiciona uma linha de encerramento no log
+"Fim do Log: $(Get-Date)" | Out-File -FilePath $logFile -Append
