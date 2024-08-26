@@ -1,0 +1,37 @@
+Set-ExecutionPolicy Bypass
+
+
+# Definir o caminho para o arquivo hosts
+$hostsPath = "$env:SystemRoot\System32\drivers\etc\hosts"
+
+# Definir as entradas que serão adicionadas para bloquear o YouTube
+$entries = @(
+    "127.0.0.1    www.youtube.com",
+    "127.0.0.1    youtube.com"
+)
+
+# Função para adicionar entradas ao arquivo hosts
+function Add-HostsEntries {
+    param (
+        [string]$filePath,
+        [string[]]$entries
+    )
+
+    # Verificar se o arquivo hosts já contém as entradas
+    $existingContent = Get-Content -Path $filePath
+    foreach ($entry in $entries) {
+        if ($existingContent -notcontains $entry) {
+            Add-Content -Path $filePath -Value $entry
+            Write-Host "Adicionado: $entry"
+        } else {
+            Write-Host "Já existe: $entry"
+        }
+    }
+}
+
+# Adicionar entradas ao arquivo hosts
+Add-HostsEntries -filePath $hostsPath -entries $entries
+
+# Limpar o cache do DNS
+ipconfig /flushdns
+Write-Host "Cache DNS limpo."
