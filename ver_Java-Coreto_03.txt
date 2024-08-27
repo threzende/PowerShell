@@ -1,18 +1,14 @@
 # Defina o nome do computador remoto
 $remoteComputer = "NomeDoComputadorRemoto"
 
-# Comando para verificar a versão do Amazon Corretto JRE 8
+# Comando para verificar a versão do Amazon Corretto JRE 8 no registro
 $command = {
-    $jrePath = "C:\java\corretto8\jr8\bin\java.exe"
-    if (Test-Path $jrePath) {
-        $jreVersion = & $jrePath -version 2>&1
-        if ($jreVersion -match "64-Bit") {
-            "64 bits"
-        } else {
-            "32 bits"
-        }
+    $jreRegistryPath = "HKLM:\SOFTWARE\JavaSoft\Java Runtime Environment"
+    if (Test-Path $jreRegistryPath) {
+        $jreVersion = Get-ItemProperty -Path $jreRegistryPath -Name "CurrentVersion"
+        $jreVersion.CurrentVersion
     } else {
-        "Amazon Corretto JRE 8 não encontrado"
+        "Amazon Corretto JRE 8 não encontrado no registro"
     }
 }
 
