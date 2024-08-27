@@ -1,0 +1,23 @@
+$servers = @("Servidor1", "Servidor2", "Servidor3") # Substitua pelos nomes dos seus servidores
+
+foreach ($server in $servers) {
+    try {
+        $result = Invoke-Command -ComputerName $server -ScriptBlock {
+            $javaPath = (Get-Command java -ErrorAction SilentlyContinue).Source
+            if ($javaPath) {
+                $javaArch = & $javaPath -version 2>&1 | Select-String -Pattern "64-Bit"
+                if ($javaArch) {
+                    "64-bit"
+                } else {
+                    "32-bit"
+                }
+            } else {
+                "Java não encontrado"
+            }
+        }
+
+        Write-Output "$server: $result"
+    } catch {
+        Write-Output "$server: Erro ao conectar ou executar o comando"
+    }
+}
