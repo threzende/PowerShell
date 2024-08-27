@@ -1,0 +1,33 @@
+# Defina o nome do computador remoto
+$remoteComputer = "NomeDoComputadorRemoto"
+
+# Comando para verificar a versão do Amazon Corretto JRE 8
+$command = {
+    $jrePaths = @(
+        "C:\Program Files\Amazon Corretto\jdk8\bin\java.exe",
+        "C:\Program Files (x86)\Amazon Corretto\jdk8\bin\java.exe",
+        "C:\Program Files\Amazon Corretto\jre8\bin\java.exe",
+        "C:\Program Files (x86)\Amazon Corretto\jre8\bin\java.exe"
+    )
+
+    $jreFound = $false
+    foreach ($jrePath in $jrePaths) {
+        if (Test-Path $jrePath) {
+            $jreVersion = & $jrePath -version 2>&1
+            $jreFound = $true
+            if ($jreVersion -match "64-Bit") {
+                "64 bits"
+            } else {
+                "32 bits"
+            }
+            break
+        }
+    }
+
+    if (-not $jreFound) {
+        "Amazon Corretto JRE 8 não encontrado"
+    }
+}
+
+# Executa o comando remotamente
+Invoke-Command -ComputerName $remoteComputer -ScriptBlock $command
