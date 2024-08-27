@@ -1,0 +1,24 @@
+# Defina o nome do computador remoto
+$remoteComputer = "NomeDoComputadorRemoto"
+
+# Comando para verificar se o Amazon Corretto JRE 8 é 32 ou 64 bits no registro
+$command = {
+    $jreRegistryPath = "HKLM:\SOFTWARE\JavaSoft\Java Runtime Environment"
+    if (Test-Path $jreRegistryPath) {
+        $jreVersion = Get-ItemProperty -Path $jreRegistryPath -Name "CurrentVersion"
+        $jrePath = "HKLM:\SOFTWARE\JavaSoft\Java Runtime Environment\$($jreVersion.CurrentVersion)"
+        $jreArch = Get-ItemProperty -Path $jrePath -Name "JavaHome"
+        if ($jreArch.JavaHome -match "Program Files \(x86\)") {
+            "32 bits"
+        } elseif ($jreArch.JavaHome -match "Program Files") {
+            "64 bits"
+        } else {
+            "Arquitetura não identificada"
+        }
+    } else {
+        "Amazon Corretto JRE 8 não encontrado no registro"
+    }
+}
+
+# Executa o comando remotamente
+Invoke-Command -ComputerName $remoteComputer -ScriptBlock $command
