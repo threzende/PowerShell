@@ -1,3 +1,1 @@
-Hello Richard,
-
-I have created the service account Serv93838, and from what I understand, you would like it to have some privileges. Could you please let me know which group you'd like me to add this account to?
+"Sorry, but this 'task' is just for adding the user to the VDI groups. If you need anything else regarding the verification, I think it would be better to open an incident. If you need help with this incident for the correct team, I can assist with that."
