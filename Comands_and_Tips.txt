@@ -54,5 +54,10 @@ Via PowerShell Get-Service -Name "nome do serviço no windows service.msc -com o
 Enable-PSRemoting -Force
 
 
+#Verificar a versão do windows
+DISM /online /Get-CurrentEdition
+
+
+
 
 
