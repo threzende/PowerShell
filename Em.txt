@@ -1,3 +1,3 @@
-Hi Steph,
+Hello Richard,
 
-Could you help us with this case? Tara submitted a request to gain access to an application, and for that, she asked to be added to a group. I added her, but she still couldn’t access the application. I asked her for more information about the access, and she mentioned that you were able to set this up for Theodore. Do you know how I can help her gain access to this application?
+I have created the service account Serv93838, and from what I understand, you would like it to have some privileges. Could you please let me know which group you'd like me to add this account to?
