@@ -7,3 +7,7 @@ New-LocalUser -Name $nomeUsuario -Password $senhaUsuario -FullName "Admin Temp" 
 
 # Adicionando o usuário ao grupo de administradores
 Add-LocalGroupMember -Group "Administradores" -Member $nomeUsuario
+
+
+Add-LocalGroupMember -Group "Remote Desktop Users" -Member "admintemp"
+
