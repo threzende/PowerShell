@@ -11,3 +11,7 @@ Add-LocalGroupMember -Group "Administradores" -Member $nomeUsuario
 
 Add-LocalGroupMember -Group "Remote Desktop Users" -Member "admintemp"
 
+
+Add-LocalGroupMember -Group "Administrators" -Member "joao"
+
+
