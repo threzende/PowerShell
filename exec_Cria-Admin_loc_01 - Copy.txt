@@ -1,0 +1,9 @@
+# Definindo as informações do novo usuário
+$nomeUsuario = "InsertAdminHere"
+$senhaUsuario = ConvertTo-SecureString "InsertPassWordHere" -AsPlainText -Force
+
+# Criando o novo usuário
+New-LocalUser -Name $nomeUsuario -Password $senhaUsuario -FullName "Admin Temp" -Description "Usuário temporário administrador"
+
+# Adicionando o usuário ao grupo de administradores
+Add-LocalGroupMember -Group "Administradores" -Member $nomeUsuario
