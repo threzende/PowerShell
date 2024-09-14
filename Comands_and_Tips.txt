@@ -58,6 +58,16 @@ Enable-PSRemoting -Force
 DISM /online /Get-CurrentEdition
 
 
+#Escuta qual aplicação está rodando na porta
+netstat -ano | findstr :9043
+#Verifica a aplicação CMD
+tasklist /FI "PID eq 11612"
+#Verifica a aplicação PowerShell
+Get-Process -Id 11612
+
+
+
+
 
 
 
