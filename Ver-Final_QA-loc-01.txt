@@ -1,0 +1,20 @@
+# Criar a pasta C:\temp se ela não existir
+$folderPath = "C:\temp"
+if (-not (Test-Path $folderPath)) {
+    New-Item -Path $folderPath -ItemType Directory
+}
+
+# Obter todos os programas instalados e filtrar pelos nomes desejados
+Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*,
+                HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* |
+    Select-Object DisplayName, DisplayVersion, Publisher, InstallDate |
+    Where-Object { $_.DisplayName -like "*Carbon Black*" -or
+                   $_.DisplayName -like "*FireEye*" -or
+                   $_.DisplayName -like "*Nessus*" -or
+                   $_.DisplayName -like "*SolarWinds*" } |
+    Sort-Object DisplayName |
+    Format-Table -AutoSize |
+    Out-File -FilePath "$folderPath\ProgramasFiltrados.txt" -Encoding UTF8
+
+# Mensagem para o usuário
+Write-Host "A lista de programas filtrados foi salva em C:\temp\ProgramasFiltrados.txt"
