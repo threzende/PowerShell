@@ -1,0 +1,67 @@
+# Criar a pasta C:\temp se ela não existir
+$folderPath = "C:\temp"
+if (-not (Test-Path $folderPath)) {
+    New-Item -Path $folderPath -ItemType Directory
+}
+
+# Nome do arquivo de saída
+$outputFile = "$folderPath\Verifica_Programas_e_Atualizacoes.txt"
+
+# --- Parte 1: Verificar programas instalados ---
+# Lista de palavras-chave para filtrar
+$keywords = @("Carbon Black", "FireEye", "Nessus", "SolarWinds")
+$foundPrograms = @()
+
+# Obter todos os programas instalados
+$installedPrograms = Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*,
+                                      HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*
+
+# Filtrar programas com base nas palavras-chave
+foreach ($keyword in $keywords) {
+    $matchingPrograms = $installedPrograms | Where-Object { $_.DisplayName -like "*$keyword*" }
+    $foundPrograms += $matchingPrograms
+}
+
+# Criar um array para armazenar a saída
+$output = @()
+
+# Verificar se foram encontrados programas
+if ($foundPrograms.Count -eq 0) {
+    # Se não encontrar, registrar mensagem
+    $output += "Nenhum dos programas especificados foi encontrado."
+} else {
+    # Caso encontre, listar detalhes
+    $output += "Programas encontrados:"
+    foreach ($program in $foundPrograms) {
+        $output += "Nome: $($program.DisplayName), Versão: $($program.DisplayVersion), Publicador: $($program.Publisher), Data de Instalação: $($program.InstallDate)"
+    }
+}
+
+# Separador
+$output += ""
+$output += "-------------------------------------"
+$output += ""
+
+# --- Parte 2: Verificar atualizações do Windows ---
+# Criar uma nova sessão de atualização
+$Session = New-Object -ComObject Microsoft.Update.Session
+$Searcher = $Session.CreateUpdateSearcher()
+
+# Pesquisar por atualizações
+$SearchResult = $Searcher.Search("IsInstalled=0")
+
+# Verificar se há atualizações pendentes
+if ($SearchResult.Updates.Count -eq 0) {
+    $output += "Nenhuma atualização pendente."
+} else {
+    $output += "Atualizações pendentes:"
+    foreach ($Update in $SearchResult.Updates) {
+        $output += $Update.Title
+    }
+}
+
+# Exportar resultados para o arquivo
+$output | Out-File -FilePath $outputFile -Encoding UTF8
+
+# Mensagem para o usuário
+Write-Host "Os resultados foram salvos em C:\temp\Verifica_Programas_e_Atualizacoes.txt"
