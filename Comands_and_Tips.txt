@@ -67,6 +67,12 @@ Get-Process -Id 11612
 
 
 
+User lockout
+Get-ADUser -Identity "NOME_DO_USUARIO" -Properties LockedOut | Select-Object Name, LockedOut
+
+
+
+
 
 
 
