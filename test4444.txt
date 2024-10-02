@@ -1,0 +1,13 @@
+# Lê a lista de servidores a partir de um arquivo de texto
+$servers = Get-Content "Z:\Bruno\Reboot.txt" # Substitua pelo caminho correto
+
+# Para cada servidor na lista
+$servers | % {
+    $serverName = $_
+    # Obtém as tarefas agendadas que têm "Reboot" no nome
+    Get-ScheduledTask -CimSession $serverName -TaskPath "\*" | 
+    Where-Object { $_.TaskName -like "*Reboot*" } | 
+    Select-Object @{n="ServerName"; e={$serverName}}, TaskName, State, 
+        @{n="LastRunTime"; e={(Get-ScheduledTaskInfo -CimSession $serverName -TaskName $_.TaskName).LastRunTime}}, 
+        @{n="NextRunTime"; e={(Get-ScheduledTaskInfo -CimSession $serverName -TaskName $_.TaskName).NextRunTime}}
+}
