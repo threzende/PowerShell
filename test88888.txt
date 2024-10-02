@@ -3,6 +3,8 @@ $servers = Get-Content "Z:\Bruno\Reboot.txt" # Substitua pelo caminho correto
 
 # Cria uma lista para armazenar os resultados
 $result = @()
+# Cria uma lista para registrar erros
+$errors = @()
 
 # Para cada servidor na lista
 $servers | ForEach-Object {
@@ -28,8 +30,8 @@ $servers | ForEach-Object {
                     NextRunTime  = $taskInfo.NextRunTime
                 }
             } catch {
-                # Exibe uma mensagem de aviso se a tarefa não for encontrada
-                Write-Warning "A tarefa '$($task.TaskName)' não foi encontrada no servidor '$serverName'."
+                # Registra a tarefa não encontrada na lista de erros
+                $errors += "A tarefa '$($task.TaskName)' não foi encontrada no servidor '$serverName'."
             }
         }
     }
@@ -37,3 +39,9 @@ $servers | ForEach-Object {
 
 # Exibe todos os resultados em formato de tabela
 $result | Format-Table -AutoSize
+
+# Se houver erros, exibe no console
+if ($errors.Count -gt 0) {
+    Write-Host "Erros encontrados:" -ForegroundColor Red
+    $errors | ForEach-Object { Write-Host $_ -ForegroundColor Yellow }
+}
