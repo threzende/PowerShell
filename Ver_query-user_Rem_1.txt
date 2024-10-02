@@ -1,0 +1,7 @@
+# Nome do servidor remoto
+$remoteServer = "serv2"
+
+# Executa o comando 'query user' no servidor remoto
+Invoke-Command -ComputerName $remoteServer -ScriptBlock {
+    query user
+}
