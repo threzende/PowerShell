@@ -1,0 +1,36 @@
+# Define o caminho para o arquivo com a lista de servidores
+$serverListPath = "C:\temp\serverz1.txt"
+
+# Verifica se o arquivo existe
+if (Test-Path $serverListPath) {
+    # Lê os servidores do arquivo
+    $servers = Get-Content -Path $serverListPath
+    
+    foreach ($server in $servers) {
+        Write-Host "`nVerificando o servidor: $server" -ForegroundColor Cyan
+        
+        try {
+            # Executa o comando remotamente no servidor
+            $taskInfo = Invoke-Command -ComputerName $server -ScriptBlock {
+                # Obtem a tarefa "Weekly Reboot"
+                $task = Get-ScheduledTask -TaskName "Weekly Reboot"
+                # Obtem detalhes adicionais sobre a tarefa, como horários
+                Get-ScheduledTaskInfo -TaskPath $task.TaskPath -TaskName $task.TaskName
+            } -ErrorAction Stop
+            
+            # Exibe informações relevantes
+            $lastRunTime = $taskInfo.LastRunTime
+            $nextRunTime = $taskInfo.NextRunTime
+
+            Write-Host "Nome da máquina: $server" -ForegroundColor Green
+            Write-Host "Última execução: $lastRunTime" -ForegroundColor White
+            Write-Host "Próxima execução: $nextRunTime" -ForegroundColor White
+            Write-Host "-----------------------------" -ForegroundColor Gray
+        } catch {
+            # Tratamento de erro caso não consiga acessar o servidor ou a task não exista
+            Write-Host "Erro ao acessar o servidor $server ou a task 'Weekly Reboot' não foi encontrada." -ForegroundColor Red
+        }
+    }
+} else {
+    Write-Host "O arquivo $serverListPath não foi encontrado." -ForegroundColor Red
+}
