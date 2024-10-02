@@ -10,8 +10,10 @@ if (Test-Path $serverListPath) {
         Write-Host "`nVerificando o servidor: $server" -ForegroundColor Cyan
         
         try {
-            # Obtém informações do agendador de tarefas (Task Scheduler)
-            $task = Get-ScheduledTask -ComputerName $server -TaskName "Reboot" -ErrorAction Stop
+            # Executa o comando remotamente no servidor
+            $task = Invoke-Command -ComputerName $server -ScriptBlock {
+                Get-ScheduledTask -TaskName "Weekly Reboot"
+            } -ErrorAction Stop
             
             # Exibe informações relevantes
             $taskName = $task.TaskName
@@ -25,7 +27,7 @@ if (Test-Path $serverListPath) {
             Write-Host "-----------------------------" -ForegroundColor Gray
         } catch {
             # Tratamento de erro caso não consiga acessar o servidor ou a task não exista
-            Write-Host "Erro ao acessar o servidor $server ou a task 'Reboot' não foi encontrada." -ForegroundColor Red
+            Write-Host "Erro ao acessar o servidor $server ou a task 'Weekly Reboot' não foi encontrada." -ForegroundColor Red
         }
     }
 } else {
