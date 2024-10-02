@@ -1,0 +1,5 @@
+# Executa o script remotamente
+Invoke-Command -ComputerName "NomeOuIPDoServidor" -ScriptBlock {
+    Get-NetIPConfiguration | Where-Object { $_.InterfaceAlias -eq "Ethernet0" } | 
+    Select-Object IPv4Address, IPv4DefaultGateway, DNSServer
+}

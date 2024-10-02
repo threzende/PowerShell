@@ -1,0 +1,1 @@
+Invoke-Command -ComputerName serv01 -ScriptBlock { & "C:\install\ONPREM\InstallALL_ONPREM.ps1" }
