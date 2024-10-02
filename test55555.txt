@@ -1,0 +1,22 @@
+# Lê a lista de servidores a partir de um arquivo de texto
+$servers = Get-Content "Z:\Bruno\Reboot.txt" # Substitua pelo caminho correto
+
+# Para cada servidor na lista
+$servers | ForEach-Object {
+    $serverName = $_
+    # Obtém as tarefas agendadas que têm "Reboot" no nome
+    $tasks = Get-ScheduledTask -CimSession $serverName -TaskPath "\*" | 
+             Where-Object { $_.TaskName -like "*Reboot*" }
+
+    # Verifica se há tarefas agendadas e exibe o nome do servidor uma vez
+    if ($tasks) {
+        # Exibe o nome do servidor uma vez
+        Write-Host "Servidor: $serverName" -ForegroundColor Cyan
+        # Para cada tarefa encontrada, seleciona as informações desejadas
+        $tasks | Select-Object TaskName, State, 
+            @{n="LastRunTime"; e={(Get-ScheduledTaskInfo -CimSession $serverName -TaskName $_.TaskName).LastRunTime}}, 
+            @{n="NextRunTime"; e={(Get-ScheduledTaskInfo -CimSession $serverName -TaskName $_.TaskName).NextRunTime}} |
+            Format-Table -AutoSize
+        Write-Host "" # Adiciona uma linha em branco para separação
+    }
+}
