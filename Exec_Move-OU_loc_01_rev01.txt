@@ -1,0 +1,11 @@
+# Defina o nome do servidor e a OU de destino
+$serverName = "serv01"
+$targetOU = "OU=aplication,OU=memberservers,OU=empresa,DC=seuDominio,DC=com"
+
+# Obtenha o objeto do servidor
+$server = Get-ADComputer -Identity $serverName
+
+# Mova o servidor para a OU de destino
+Move-ADObject -Identity $server.DistinguishedName -TargetPath $targetOU
+
+Write-Host "Servidor $serverName movido para $targetOU com sucesso."
