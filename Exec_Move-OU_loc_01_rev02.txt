@@ -1,0 +1,16 @@
+# Defina o nome do servidor que você deseja mover
+$servidor = "NomeServidor"
+
+# Defina a OU de destino para onde o servidor será movido
+$ouDestino = "OU=Member Servers,OU=Computers,OU=Ent,DC=dominio,DC=com"
+
+# Obtém o objeto do servidor no AD
+$serverObject = Get-ADComputer -Identity $servidor
+
+if ($serverObject) {
+    # Move o objeto para a nova OU
+    Move-ADObject -Identity $serverObject.DistinguishedName -TargetPath $ouDestino
+    Write-Host "Servidor $servidor movido para $ouDestino com sucesso."
+} else {
+    Write-Host "Servidor $servidor não encontrado no AD."
+}
