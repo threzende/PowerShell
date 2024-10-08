@@ -1,8 +1,17 @@
-# Lista de servidores
-$servers = @("serv1", "serv2", "serv3")
+# Caminho do arquivo que contém a lista de servidores
+$serverFile = "C:\temp\servers.txt"
 
 # Caminho do script que você deseja executar
 $scriptPath = "C:\install_rev1\onprem\installAl_OnPrem.ps1"
+
+# Verifica se o arquivo existe
+if (-Not (Test-Path $serverFile)) {
+    Write-Host "Arquivo $serverFile não encontrado."
+    exit
+}
+
+# Lê os nomes dos servidores do arquivo
+$servers = Get-Content $serverFile
 
 # Loop através de cada servidor
 foreach ($servername in $servers) {
