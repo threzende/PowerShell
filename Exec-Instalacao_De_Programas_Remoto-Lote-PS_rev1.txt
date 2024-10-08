@@ -1,8 +1,8 @@
 # Caminho do arquivo que contém a lista de servidores
 $serverFile = "C:\temp\servers.txt"
 
-# Caminho do script que você deseja executar
-$scriptPath = "C:\install_rev1\onprem\installAl_OnPrem.ps1"
+# Caminho do script que você deseja executar no servidor remoto
+$scriptPath = "C:\install_rev1\ONPREM\InstallALL_ONPREM.ps1"
 
 # Verifica se o arquivo existe
 if (-Not (Test-Path $serverFile)) {
