@@ -1,0 +1,18 @@
+# Lista de servidores
+$servers = @("serv1", "serv2", "serv3")
+
+# Caminho do script que você deseja executar
+$scriptPath = "C:\install_rev1\onprem\installAl_OnPrem.ps1"
+
+# Loop através de cada servidor
+foreach ($servername in $servers) {
+    try {
+        Invoke-Command -ComputerName $servername -ScriptBlock {
+            param($scriptPath)
+            & $scriptPath
+        } -ArgumentList $scriptPath
+        Write-Host "Script executado com sucesso em $servername"
+    } catch {
+        Write-Host "Erro ao executar o script em $servername: $_"
+    }
+}
