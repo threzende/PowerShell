@@ -17,9 +17,8 @@ $servers = Get-Content $serverFile
 foreach ($servername in $servers) {
     try {
         Invoke-Command -ComputerName $servername -ScriptBlock {
-            param($scriptPath)
-            & $scriptPath
-        } -ArgumentList $scriptPath
+            & "C:\install_rev1\ONPREM\InstallALL_ONPREM.ps1"  # Chama diretamente o caminho do script
+        }
         Write-Host "Script executado com sucesso em $servername"
     } catch {
         Write-Host "Erro ao executar o script em $servername: $_"
