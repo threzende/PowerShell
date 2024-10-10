@@ -5,7 +5,7 @@ Set-ExecutionPolicy Bypass -Scope Process -Force
 $directoryPath = "C:\Temp\thsfz"
 $logPath = "$directoryPath\dellnetworkerlog.txt"
 $serverListPath = "$directoryPath\serverz.txt"
-$installerPath = "C:\install\DellNetworker\dellnetworker.exe" # Caminho atualizado
+$installerPath = "C:\install\DellNetworker\dellnetworker.exe" # Caminho do desinstalador
 
 # Verificar se a pasta C:\Temp\thsfz existe, caso contrário, criar
 if (-not (Test-Path $directoryPath)) {
@@ -29,47 +29,41 @@ function Write-Log {
 
 # Verificar se o arquivo serverz.txt existe
 if (-not (Test-Path $serverListPath)) {
-    Write-Host "Arquivo de lista de servidores não encontrado em $serverListPath."
+    Write-Log "Arquivo de lista de servidores não encontrado em $serverListPath."
     exit
 }
 
 # Ler os servidores do arquivo serverz.txt
 $servers = Get-Content -Path $serverListPath
 
-# Função para desinstalar usando o instalador do NetWorker
-function Uninstall-NetWorker {
-    param (
-        [string]$server
-    )
-
-    try {
-        # Verificar se o instalador existe
-        if (-not (Test-Path $installerPath)) {
-            Write-Log "Instalador do NetWorker não encontrado em $installerPath no servidor $server."
-            return
-        }
-
-        Write-Log "Iniciando a desinstalação do NetWorker no servidor $server usando o instalador..."
-
-        # Executar o instalador com o parâmetro de desinstalação
-        $uninstallCommand = "& `"$installerPath`" /uninstall" # Ajuste se necessário
-
-        # Executar o comando no servidor remoto
-        Invoke-Command -ComputerName $server -ScriptBlock {
-            param ($uninstallCommand)
-            Invoke-Expression $uninstallCommand
-        } -ArgumentList $uninstallCommand
-
-        Write-Log "Desinstalação do NetWorker no servidor $server concluída."
-    } catch {
-        Write-Log "Erro ao tentar desinstalar o NetWorker no servidor $server. Detalhes: $_"
-    }
-}
-
 # Processar cada servidor da lista
 foreach ($server in $servers) {
     Write-Log "Iniciando o processo de desinstalação no servidor $server..."
-    Uninstall-NetWorker $server
+
+    try {
+        # Parar os serviços do NetWorker
+        Write-Log "Parando os serviços do NetWorker no servidor $server..."
+        Invoke-Command -ComputerName $server -ScriptBlock {
+            Stop-Service -Name "nsrexecd" -Force -ErrorAction SilentlyContinue
+            Stop-Service -Name "nwui" -Force -ErrorAction SilentlyContinue
+        }
+
+        # Executar o desinstalador
+        Write-Log "Executando o desinstalador no servidor $server..."
+        $uninstallResult = Invoke-Command -ComputerName $server -ScriptBlock {
+            param($installer)
+            Start-Process -FilePath $installer -ArgumentList "/uninstall", "/quiet", "/norestart" -Wait -PassThru
+        } -ArgumentList $installerPath
+
+        # Verificar o resultado da desinstalação
+        if ($uninstallResult.ExitCode -eq 0) {
+            Write-Log "Desinstalação do Dell NetWorker no servidor $server concluída com sucesso."
+        } else {
+            Write-Log "Falha na desinstalação do Dell NetWorker no servidor $server. Código de saída: $($uninstallResult.ExitCode)"
+        }
+    } catch {
+        Write-Log "Erro ao tentar desinstalar o Dell NetWorker no servidor $server. Detalhes: $_"
+    }
 }
 
 Write-Log "Processo de desinstalação concluído."
