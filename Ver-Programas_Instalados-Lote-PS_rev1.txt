@@ -1,0 +1,46 @@
+# Caminho para o diretório e log
+$directoryPath = "C:\Temp\thsfz"
+$logPath = "$directoryPath\Programas_log.txt"
+$serverListPath = "$directoryPath\serverz.txt"
+
+# Verifica se o diretório existe, se não, cria
+if (-Not (Test-Path -Path $directoryPath)) {
+    New-Item -ItemType Directory -Path $directoryPath
+}
+
+# Verifica se o arquivo de lista de servidores existe
+if (-Not (Test-Path -Path $serverListPath)) {
+    Write-Host "O arquivo de lista de servidores não foi encontrado: $serverListPath"
+    exit
+}
+
+# Lê a lista de servidores
+$servers = Get-Content -Path $serverListPath
+
+# Inicia o log
+"Data e Hora: $(Get-Date)" | Out-File -FilePath $logPath -Encoding UTF8
+"Lista de Programas Instalados:" | Out-File -FilePath $logPath -Append -Encoding UTF8
+
+# Loop através da lista de servidores
+foreach ($server in $servers) {
+    try {
+        # Obtém a lista de programas instalados
+        $programs = Get-WmiObject -Class Win32_Product -ComputerName $server -ErrorAction Stop | Select-Object -Property Name, Version
+
+        # Se não houver programas, registra isso
+        if ($programs.Count -eq 0) {
+            "$server: Nenhum programa encontrado." | Out-File -FilePath $logPath -Append -Encoding UTF8
+        } else {
+            # Registra os programas instalados
+            "$server:" | Out-File -FilePath $logPath -Append -Encoding UTF8
+            foreach ($program in $programs) {
+                "$($program.Name) - $($program.Version)" | Out-File -FilePath $logPath -Append -Encoding UTF8
+            }
+        }
+    } catch {
+        # Registra o erro se a conexão falhar
+        "$server: Erro ao acessar - $_" | Out-File -FilePath $logPath -Append -Encoding UTF8
+    }
+}
+
+Write-Host "Processo concluído. Veja o log em: $logPath"
