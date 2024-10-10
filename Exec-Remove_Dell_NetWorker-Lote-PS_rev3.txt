@@ -5,9 +5,9 @@ foreach ($server in $serverList) {
     try {
         $session = New-PSSession -ComputerName $server
         Invoke-Command -Session $session -ScriptBlock {
-            $app = Get-WmiObject -Class Win32_Product | Where-Object { $_.Name -eq "NetWorker" }
+            $app = Get-CimInstance -ClassName Win32_Product | Where-Object { $_.Name -eq "NetWorker" }
             if ($app) {
-                $app.Uninstall()
+                $app | Invoke-CimMethod -MethodName Uninstall
                 Write-Output "Sucesso: Desinstalação do NetWorker concluída no servidor $server."
             } else {
                 Write-Output "Erro: NetWorker não encontrado no servidor $server."
