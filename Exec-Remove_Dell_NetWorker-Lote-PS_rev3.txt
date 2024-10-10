@@ -15,7 +15,11 @@ foreach ($server in $serverList) {
         } -ErrorAction Stop
         Remove-PSSession -Session $session
         
-        Add-Content -Path $logFilePath -Value "Sucesso: Desinstalação do NetWorker concluída no servidor $server."
+        if ($app) {
+            Add-Content -Path $logFilePath -Value "Sucesso: Desinstalação do NetWorker concluída no servidor $server."
+        } else {
+            Add-Content -Path $logFilePath -Value "Erro: NetWorker não encontrado no servidor $server."
+        }
     } catch {
         $status = "Erro: Falha ao desinstalar o NetWorker no servidor $server. Detalhes do erro: $_"
         Write-Output $status
