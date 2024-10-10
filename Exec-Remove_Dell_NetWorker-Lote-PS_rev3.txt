@@ -1,20 +1,20 @@
-$serverList = Get-Content -Path "C:\temp\thsfz"
-$logFilePath = "C:\temp\dellNWlogz.txt"
+$serverList = Get-Content -Path "C:\temp\thsfz\serverz.txt"
+$logFilePath = "C:\temp\thsfz\dellNWlogz.txt"
 
 foreach ($server in $serverList) {
     try {
         $session = New-PSSession -ComputerName $server
         Invoke-Command -Session $session -ScriptBlock {
-            $app = Get-WmiObject -Class Win32_Product | Where-Object { $_.Name -eq "Dell NetWorker" }
+            $app = Get-WmiObject -Class Win32_Product | Where-Object { $_.Name -eq "NetWorker" }
             $app.Uninstall()
         }
         Remove-PSSession -Session $session
         
-        $status = "Sucesso: Desinstalação do Dell NetWorker concluída no servidor $server."
+        $status = "Sucesso: Desinstalação do NetWorker concluída no servidor $server."
         Write-Output $status
         Add-Content -Path $logFilePath -Value $status
     } catch {
-        $status = "Erro: Falha ao desinstalar o Dell NetWorker no servidor $server. Detalhes do erro: $_"
+        $status = "Erro: Falha ao desinstalar o NetWorker no servidor $server. Detalhes do erro: $_"
         Write-Output $status
         Add-Content -Path $logFilePath -Value $status
     }
