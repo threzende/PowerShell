@@ -3,9 +3,13 @@ $logFilePath = "C:\temp\dellNWlogz.txt"
 
 foreach ($server in $serverList) {
     try {
-        $uninstallProcess = Invoke-Command -ComputerName $server -ScriptBlock {
-            Start-Process "msiexec.exe" -ArgumentList "/x {GUID_OF_NETWORKER_INSTALLATION} /qn" -Wait -NoNewWindow
+        $session = New-PSSession -ComputerName $server
+        Invoke-Command -Session $session -ScriptBlock {
+            $app = Get-WmiObject -Class Win32_Product | Where-Object { $_.Name -eq "Dell NetWorker" }
+            $app.Uninstall()
         }
+        Remove-PSSession -Session $session
+        
         $status = "Sucesso: Desinstalação do Dell NetWorker concluída no servidor $server."
         Write-Output $status
         Add-Content -Path $logFilePath -Value $status
