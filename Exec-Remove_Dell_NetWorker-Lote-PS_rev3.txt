@@ -1,28 +1,75 @@
-$serverList = Get-Content -Path "C:\temp\thsfz\serverz.txt"
-$logFilePath = "C:\temp\thsfz\dellNWlogz.txt"
+# Definir a política de execução para 'Bypass' temporariamente
+Set-ExecutionPolicy Bypass -Scope Process -Force
 
-foreach ($server in $serverList) {
+# Caminho para o diretório e log
+$directoryPath = "C:\Temp\thsfz"
+$logPath = "$directoryPath\dellnetworkerlog.txt"
+$serverListPath = "$directoryPath\serverz.txt"
+$installerPath = "C:\install\DellNetworker\dellnetworker.exe" # Caminho atualizado
+
+# Verificar se a pasta C:\Temp\thsfz existe, caso contrário, criar
+if (-not (Test-Path $directoryPath)) {
+    New-Item -Path $directoryPath -ItemType Directory
+}
+
+# Função para escrever no log e no console
+function Write-Log {
+    param (
+        [string]$message
+    )
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $logMessage = "$timestamp - $message"
+
+    # Escrever no log
+    Add-Content -Path $logPath -Value $logMessage
+
+    # Escrever no console
+    Write-Host $logMessage
+}
+
+# Verificar se o arquivo serverz.txt existe
+if (-not (Test-Path $serverListPath)) {
+    Write-Host "Arquivo de lista de servidores não encontrado em $serverListPath."
+    exit
+}
+
+# Ler os servidores do arquivo serverz.txt
+$servers = Get-Content -Path $serverListPath
+
+# Função para desinstalar usando o instalador do NetWorker
+function Uninstall-NetWorker {
+    param (
+        [string]$server
+    )
+
     try {
-        $session = New-PSSession -ComputerName $server
-        Invoke-Command -Session $session -ScriptBlock {
-            $app = Get-CimInstance -ClassName Win32_Product | Where-Object { $_.Name -eq "NetWorker" }
-            if ($app) {
-                $app | Invoke-CimMethod -MethodName Uninstall
-                Write-Output "Sucesso: Desinstalação do NetWorker concluída no servidor $server."
-            } else {
-                Write-Output "Erro: NetWorker não encontrado no servidor $server."
-            }
-        } -ErrorAction Stop
-        Remove-PSSession -Session $session
-        
-        if ($app) {
-            Add-Content -Path $logFilePath -Value "Sucesso: Desinstalação do NetWorker concluída no servidor $server."
-        } else {
-            Add-Content -Path $logFilePath -Value "Erro: NetWorker não encontrado no servidor $server."
+        # Verificar se o instalador existe
+        if (-not (Test-Path $installerPath)) {
+            Write-Log "Instalador do NetWorker não encontrado em $installerPath no servidor $server."
+            return
         }
+
+        Write-Log "Iniciando a desinstalação do NetWorker no servidor $server usando o instalador..."
+
+        # Executar o instalador com o parâmetro de desinstalação
+        $uninstallCommand = "& `"$installerPath`" /uninstall" # Ajuste se necessário
+
+        # Executar o comando no servidor remoto
+        Invoke-Command -ComputerName $server -ScriptBlock {
+            param ($uninstallCommand)
+            Invoke-Expression $uninstallCommand
+        } -ArgumentList $uninstallCommand
+
+        Write-Log "Desinstalação do NetWorker no servidor $server concluída."
     } catch {
-        $status = "Erro: Falha ao desinstalar o NetWorker no servidor $server. Detalhes do erro: $_"
-        Write-Output $status
-        Add-Content -Path $logFilePath -Value $status
+        Write-Log "Erro ao tentar desinstalar o NetWorker no servidor $server. Detalhes: $_"
     }
 }
+
+# Processar cada servidor da lista
+foreach ($server in $servers) {
+    Write-Log "Iniciando o processo de desinstalação no servidor $server..."
+    Uninstall-NetWorker $server
+}
+
+Write-Log "Processo de desinstalação concluído."
