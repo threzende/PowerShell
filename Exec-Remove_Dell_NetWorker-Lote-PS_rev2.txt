@@ -1,8 +1,10 @@
 # Definir a política de execução para 'Bypass' temporariamente
 Set-ExecutionPolicy Bypass -Scope Process -Force
 
-# Nome do programa que deseja desinstalar (substitua conforme necessário)
-$programName = "Dell Network Client"
+# Informações do programa que deseja desinstalar (substitua conforme necessário)
+$programName = "Networkr Client"
+$programPublisher = "Dell EM"
+$programVersion = "19.7.0.1"
 
 # Caminho para o diretório e log
 $directoryPath = "C:\Temp\thsfz"
@@ -34,11 +36,12 @@ $servers = Get-Content -Path $serverListPath
 
 # Processar cada servidor da lista
 foreach ($server in $servers) {
-    Write-Log "Iniciando o processo de desinstalação em $server..."
+    Write-Log "Iniciando o processo de desinstalação no servidor $server..."
 
     try {
         # Conectar-se ao servidor remoto e obter a lista de programas instalados
-        $installedProgram = Get-WmiObject -Class Win32_Product -ComputerName $server | Where-Object { $_.Name -like "*$programName*" }
+        $installedProgram = Get-WmiObject -Class Win32_Product -ComputerName $server |
+                            Where-Object { $_.Name -eq $programName -and $_.Vendor -eq $programPublisher -and $_.Version -eq $programVersion }
 
         if ($installedProgram) {
             # Se o programa foi encontrado, desinstalar
@@ -53,7 +56,7 @@ foreach ($server in $servers) {
                 }
             }
         } else {
-            Write-Log "Programa $programName não encontrado no servidor $server."
+            Write-Log "Programa $programName não encontrado no servidor $server com Publisher $programPublisher e versão $programVersion."
         }
     } catch {
         Write-Log "Erro ao tentar desinstalar o $programName no servidor $server. Detalhes: $_"
