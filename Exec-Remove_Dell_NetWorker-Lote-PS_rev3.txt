@@ -6,13 +6,16 @@ foreach ($server in $serverList) {
         $session = New-PSSession -ComputerName $server
         Invoke-Command -Session $session -ScriptBlock {
             $app = Get-WmiObject -Class Win32_Product | Where-Object { $_.Name -eq "NetWorker" }
-            $app.Uninstall()
-        }
+            if ($app) {
+                $app.Uninstall()
+                Write-Output "Sucesso: Desinstalação do NetWorker concluída no servidor $server."
+            } else {
+                Write-Output "Erro: NetWorker não encontrado no servidor $server."
+            }
+        } -ErrorAction Stop
         Remove-PSSession -Session $session
         
-        $status = "Sucesso: Desinstalação do NetWorker concluída no servidor $server."
-        Write-Output $status
-        Add-Content -Path $logFilePath -Value $status
+        Add-Content -Path $logFilePath -Value "Sucesso: Desinstalação do NetWorker concluída no servidor $server."
     } catch {
         $status = "Erro: Falha ao desinstalar o NetWorker no servidor $server. Detalhes do erro: $_"
         Write-Output $status
