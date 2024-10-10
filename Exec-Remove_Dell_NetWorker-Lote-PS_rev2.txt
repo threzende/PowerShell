@@ -4,12 +4,14 @@ Set-ExecutionPolicy Bypass -Scope Process -Force
 # Nome do programa que deseja desinstalar (substitua conforme necessário)
 $programName = "Dell Network Client"
 
-# Caminho para o log
-$logPath = "C:\Temp\dellnetworkerlog.txt"
+# Caminho para o diretório e log
+$directoryPath = "C:\Temp\thsfz"
+$logPath = "$directoryPath\dellnetworkerlog.txt"
+$serverListPath = "$directoryPath\serverz.txt"
 
-# Verificar se a pasta C:\Temp existe, caso contrário, criar
-if (-not (Test-Path "C:\Temp")) {
-    New-Item -Path "C:\Temp" -ItemType Directory
+# Verificar se a pasta C:\Temp\thsfz existe, caso contrário, criar
+if (-not (Test-Path $directoryPath)) {
+    New-Item -Path $directoryPath -ItemType Directory
 }
 
 # Função para escrever no log
@@ -21,26 +23,41 @@ function Write-Log {
     Add-Content -Path $logPath -Value "$timestamp - $message"
 }
 
-# Iniciar o processo de desinstalação e log
-Write-Log "Iniciando o processo de desinstalação do $programName..."
+# Verificar se o arquivo serverz.txt existe
+if (-not (Test-Path $serverListPath)) {
+    Write-Host "Arquivo de lista de servidores não encontrado em $serverListPath."
+    exit
+}
 
-# Obter a lista de programas instalados que correspondem ao nome especificado
-$installedProgram = Get-WmiObject -Class Win32_Product | Where-Object { $_.Name -like "*$programName*" }
+# Ler os servidores do arquivo serverz.txt
+$servers = Get-Content -Path $serverListPath
 
-if ($installedProgram) {
-    # Se o programa foi encontrado, desinstalar
-    foreach ($program in $installedProgram) {
-        Write-Host "Desinstalando $($program.Name)..."
-        $uninstallResult = $program.Uninstall()
+# Processar cada servidor da lista
+foreach ($server in $servers) {
+    Write-Log "Iniciando o processo de desinstalação em $server..."
 
-        if ($uninstallResult.ReturnValue -eq 0) {
-            Write-Log "Desinstalação do $($program.Name) concluída com sucesso."
+    try {
+        # Conectar-se ao servidor remoto e obter a lista de programas instalados
+        $installedProgram = Get-WmiObject -Class Win32_Product -ComputerName $server | Where-Object { $_.Name -like "*$programName*" }
+
+        if ($installedProgram) {
+            # Se o programa foi encontrado, desinstalar
+            foreach ($program in $installedProgram) {
+                Write-Host "Desinstalando $($program.Name) no servidor $server..."
+                $uninstallResult = $program.Uninstall()
+
+                if ($uninstallResult.ReturnValue -eq 0) {
+                    Write-Log "Desinstalação do $($program.Name) no servidor $server concluída com sucesso."
+                } else {
+                    Write-Log "Falha na desinstalação do $($program.Name) no servidor $server. Código de retorno: $($uninstallResult.ReturnValue)"
+                }
+            }
         } else {
-            Write-Log "Falha na desinstalação do $($program.Name). Código de retorno: $($uninstallResult.ReturnValue)"
+            Write-Log "Programa $programName não encontrado no servidor $server."
         }
+    } catch {
+        Write-Log "Erro ao tentar desinstalar o $programName no servidor $server. Detalhes: $_"
     }
-} else {
-    Write-Log "Programa $programName não encontrado."
 }
 
 Write-Log "Processo de desinstalação concluído."
