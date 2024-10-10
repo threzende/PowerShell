@@ -1,7 +1,7 @@
 # Definir a política de execução para 'Bypass' temporariamente
 Set-ExecutionPolicy Bypass -Scope Process -Force
 
-# Informações do programa que deseja desinstalar (substitua conforme necessário)
+# Informações do programa que deseja desinstalar
 $programName = "Networkr Client"
 $programPublisher = "Dell EM"
 
@@ -15,13 +15,19 @@ if (-not (Test-Path $directoryPath)) {
     New-Item -Path $directoryPath -ItemType Directory
 }
 
-# Função para escrever no log
+# Função para escrever no log e no console
 function Write-Log {
     param (
         [string]$message
     )
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    Add-Content -Path $logPath -Value "$timestamp - $message"
+    $logMessage = "$timestamp - $message"
+
+    # Escrever no log
+    Add-Content -Path $logPath -Value $logMessage
+
+    # Escrever no console
+    Write-Host $logMessage
 }
 
 # Verificar se o arquivo serverz.txt existe
@@ -33,33 +39,55 @@ if (-not (Test-Path $serverListPath)) {
 # Ler os servidores do arquivo serverz.txt
 $servers = Get-Content -Path $serverListPath
 
+# Função para desinstalar o programa via chave de registro
+function Uninstall-Program {
+    param (
+        [string]$server
+    )
+
+    $uninstallKey = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
+    $uninstallKey64 = "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
+
+    $programFound = $false
+
+    # Conectar-se ao registro remoto (chave 32-bit e 64-bit)
+    foreach ($keyPath in @($uninstallKey, $uninstallKey64)) {
+        $regPath = "HKLM:\$keyPath"
+        try {
+            $programs = Get-ItemProperty -Path "Registry::$regPath\*" -ErrorAction SilentlyContinue -ComputerName $server |
+                        Where-Object { $_.DisplayName -eq $programName -and $_.Publisher -eq $programPublisher }
+
+            if ($programs) {
+                foreach ($program in $programs) {
+                    $programFound = $true
+                    $uninstallString = $program.UninstallString
+
+                    # Confirmar se é um comando MSI ou executável
+                    if ($uninstallString) {
+                        Write-Log "Desinstalando $programName no servidor $server..."
+                        Invoke-Command -ComputerName $server -ScriptBlock {
+                            param ($uninstallCommand)
+                            & cmd.exe /c $uninstallCommand /quiet /norestart
+                        } -ArgumentList $uninstallString
+
+                        Write-Log "Desinstalação do $programName no servidor $server concluída."
+                    }
+                }
+            }
+        } catch {
+            Write-Log "Erro ao acessar o registro no servidor $server. Detalhes: $_"
+        }
+    }
+
+    if (-not $programFound) {
+        Write-Log "Programa $programName não encontrado no servidor $server com Publisher $programPublisher."
+    }
+}
+
 # Processar cada servidor da lista
 foreach ($server in $servers) {
     Write-Log "Iniciando o processo de desinstalação no servidor $server..."
-
-    try {
-        # Conectar-se ao servidor remoto e obter a lista de programas instalados
-        $installedProgram = Get-WmiObject -Class Win32_Product -ComputerName $server |
-                            Where-Object { $_.Name -eq $programName -and $_.Vendor -eq $programPublisher }
-
-        if ($installedProgram) {
-            # Se o programa foi encontrado, desinstalar
-            foreach ($program in $installedProgram) {
-                Write-Host "Desinstalando $($program.Name) no servidor $server..."
-                $uninstallResult = $program.Uninstall()
-
-                if ($uninstallResult.ReturnValue -eq 0) {
-                    Write-Log "Desinstalação do $($program.Name) no servidor $server concluída com sucesso."
-                } else {
-                    Write-Log "Falha na desinstalação do $($program.Name) no servidor $server. Código de retorno: $($uninstallResult.ReturnValue)"
-                }
-            }
-        } else {
-            Write-Log "Programa $programName não encontrado no servidor $server com Publisher $programPublisher."
-        }
-    } catch {
-        Write-Log "Erro ao tentar desinstalar o $programName no servidor $server. Detalhes: $_"
-    }
+    Uninstall-Program $server
 }
 
 Write-Log "Processo de desinstalação concluído."
