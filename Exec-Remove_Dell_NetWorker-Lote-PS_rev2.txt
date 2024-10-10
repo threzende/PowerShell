@@ -54,23 +54,36 @@ function Uninstall-Program {
     foreach ($keyPath in @($uninstallKey, $uninstallKey64)) {
         $regPath = "HKLM:\$keyPath"
         try {
-            $programs = Get-ItemProperty -Path "Registry::$regPath\*" -ErrorAction SilentlyContinue -ComputerName $server |
-                        Where-Object { $_.DisplayName -eq $programName -and $_.Publisher -eq $programPublisher }
+            $programs = Invoke-Command -ComputerName $server -ScriptBlock {
+                param ($regPath)
+                Get-ItemProperty -Path "Registry::$regPath\*" -ErrorAction SilentlyContinue
+            } -ArgumentList $regPath | Where-Object { $_.DisplayName -eq $programName -and $_.Publisher -eq $programPublisher }
 
             if ($programs) {
                 foreach ($program in $programs) {
                     $programFound = $true
                     $uninstallString = $program.UninstallString
 
-                    # Confirmar se é um comando MSI ou executável
+                    # Verificar se a chave UninstallString existe
                     if ($uninstallString) {
-                        Write-Log "Desinstalando $programName no servidor $server..."
+                        Write-Log "Comando de desinstalação encontrado para $programName no servidor $server: $uninstallString"
+
+                        # Executar o comando de desinstalação
                         Invoke-Command -ComputerName $server -ScriptBlock {
-                            param ($uninstallCommand)
-                            & cmd.exe /c $uninstallCommand /quiet /norestart
+                            param ($uninstallString)
+                            # Verificar se o comando de desinstalação é MSI ou EXE
+                            if ($uninstallString -like "msiexec*") {
+                                Write-Log "Executando MSI Uninstall no servidor"
+                                & cmd.exe /c "$uninstallString /quiet /norestart"
+                            } else {
+                                Write-Log "Executando EXE Uninstall no servidor"
+                                & cmd.exe /c "$uninstallString /quiet /norestart"
+                            }
                         } -ArgumentList $uninstallString
 
                         Write-Log "Desinstalação do $programName no servidor $server concluída."
+                    } else {
+                        Write-Log "Chave de desinstalação (UninstallString) não encontrada para $programName no servidor $server."
                     }
                 }
             }
