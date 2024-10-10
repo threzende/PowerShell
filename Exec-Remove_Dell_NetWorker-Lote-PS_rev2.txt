@@ -1,9 +1,8 @@
 # Definir a política de execução para 'Bypass' temporariamente
 Set-ExecutionPolicy Bypass -Scope Process -Force
 
-# Informações do programa que deseja desinstalar
-$programName = "Networkr Client"
-$programPublisher = "Dell EM"
+# Nome parcial dos programas relacionados ao NetWorker que deseja desinstalar
+$programNamePattern = "NetWorker"
 
 # Caminho para o diretório e log
 $directoryPath = "C:\Temp\thsfz"
@@ -39,68 +38,51 @@ if (-not (Test-Path $serverListPath)) {
 # Ler os servidores do arquivo serverz.txt
 $servers = Get-Content -Path $serverListPath
 
-# Função para desinstalar o programa via chave de registro
-function Uninstall-Program {
+# Função para desinstalar usando o WMIC e IdentifyingNumber
+function Uninstall-NetWorker {
     param (
         [string]$server
     )
 
-    $uninstallKey = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
-    $uninstallKey64 = "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
+    try {
+        # Obter a lista de produtos relacionados ao NetWorker no servidor remoto
+        $wmicQuery = "wmic product where ""Name like '%$programNamePattern%'"" get IdentifyingNumber, Name, PackageName"
+        $installedProducts = Invoke-Command -ComputerName $server -ScriptBlock {
+            param ($wmicQuery)
+            wmic /node:$env:COMPUTERNAME $wmicQuery
+        } -ArgumentList $wmicQuery
 
-    $programFound = $false
+        if ($installedProducts) {
+            # Analisar cada produto relacionado ao NetWorker e desinstalar
+            foreach ($product in $installedProducts) {
+                $identifyingNumber = $product.IdentifyingNumber
+                $productName = $product.Name
 
-    # Conectar-se ao registro remoto (chave 32-bit e 64-bit)
-    foreach ($keyPath in @($uninstallKey, $uninstallKey64)) {
-        $regPath = "HKLM:\$keyPath"
-        try {
-            $programs = Invoke-Command -ComputerName $server -ScriptBlock {
-                param ($regPath)
-                Get-ItemProperty -Path "Registry::$regPath\*" -ErrorAction SilentlyContinue
-            } -ArgumentList $regPath | Where-Object { $_.DisplayName -eq $programName -and $_.Publisher -eq $programPublisher }
+                if ($identifyingNumber -and $productName) {
+                    Write-Log "Desinstalando $productName no servidor $server (IdentifyingNumber: $identifyingNumber)..."
 
-            if ($programs) {
-                foreach ($program in $programs) {
-                    $programFound = $true
-                    $uninstallString = $program.UninstallString
+                    # Executar o comando de desinstalação via WMIC
+                    $uninstallCommand = "wmic product where ""IdentifyingNumber='$identifyingNumber'"" call uninstall"
+                    Invoke-Command -ComputerName $server -ScriptBlock {
+                        param ($uninstallCommand)
+                        wmic /node:$env:COMPUTERNAME $uninstallCommand
+                    } -ArgumentList $uninstallCommand
 
-                    # Verificar se a chave UninstallString existe
-                    if ($uninstallString) {
-                        Write-Log "Comando de desinstalação encontrado para $programName no servidor $server: $uninstallString"
-
-                        # Executar o comando de desinstalação
-                        Invoke-Command -ComputerName $server -ScriptBlock {
-                            param ($uninstallString)
-                            # Verificar se o comando de desinstalação é MSI ou EXE
-                            if ($uninstallString -like "msiexec*") {
-                                Write-Log "Executando MSI Uninstall no servidor"
-                                & cmd.exe /c "$uninstallString /quiet /norestart"
-                            } else {
-                                Write-Log "Executando EXE Uninstall no servidor"
-                                & cmd.exe /c "$uninstallString /quiet /norestart"
-                            }
-                        } -ArgumentList $uninstallString
-
-                        Write-Log "Desinstalação do $programName no servidor $server concluída."
-                    } else {
-                        Write-Log "Chave de desinstalação (UninstallString) não encontrada para $programName no servidor $server."
-                    }
+                    Write-Log "Desinstalação do $productName no servidor $server concluída."
                 }
             }
-        } catch {
-            Write-Log "Erro ao acessar o registro no servidor $server. Detalhes: $_"
+        } else {
+            Write-Log "Nenhum produto NetWorker encontrado no servidor $server."
         }
-    }
-
-    if (-not $programFound) {
-        Write-Log "Programa $programName não encontrado no servidor $server com Publisher $programPublisher."
+    } catch {
+        Write-Log "Erro ao tentar desinstalar o NetWorker no servidor $server. Detalhes: $_"
     }
 }
 
 # Processar cada servidor da lista
 foreach ($server in $servers) {
     Write-Log "Iniciando o processo de desinstalação no servidor $server..."
-    Uninstall-Program $server
+    Uninstall-NetWorker $server
 }
 
 Write-Log "Processo de desinstalação concluído."
