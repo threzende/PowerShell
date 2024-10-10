@@ -1,0 +1,97 @@
+# Definir a política de execução para 'Bypass' temporariamente
+Set-ExecutionPolicy Bypass -Scope Process -Force
+
+# Caminho para o diretório e log
+$directoryPath = "C:\Temp\thsfz"
+$logPath = "$directoryPath\dellnetworkerlog.txt"
+$serverListPath = "$directoryPath\serverz.txt"
+$installerSourcePath = "$directoryPath\dellnetworker.exe" # Caminho do instalador de origem
+$installerDestinationPath = "C:\Temp\DellNetWorker\dellnetworker.exe" # Caminho do instalador de destino
+
+# Verificar se a pasta C:\Temp\thsfz existe, caso contrário, criar
+if (-not (Test-Path $directoryPath)) {
+    New-Item -Path $directoryPath -ItemType Directory
+}
+
+# Função para escrever no log e no console
+function Write-Log {
+    param (
+        [string]$message,
+        [ConsoleColor]$color = [ConsoleColor]::White # Cor padrão
+    )
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $logMessage = "$timestamp - $message"
+
+    # Escrever no log
+    Add-Content -Path $logPath -Value $logMessage
+
+    # Escrever no console com cor
+    $currentColor = $Host.UI.RawUI.ForegroundColor
+    $Host.UI.RawUI.ForegroundColor = $color
+    Write-Host $logMessage
+    $Host.UI.RawUI.ForegroundColor = $currentColor
+}
+
+# Verificar se o arquivo serverz.txt existe
+if (-not (Test-Path $serverListPath)) {
+    Write-Log "Arquivo de lista de servidores não encontrado em $serverListPath." -Color [ConsoleColor]::Red
+    exit
+}
+
+# Ler os servidores do arquivo serverz.txt
+$servers = Get-Content -Path $serverListPath
+
+# Processar cada servidor da lista
+foreach ($server in $servers) {
+    Write-Log "Verificando o status do servidor $server..."
+
+    # Testar conectividade com o servidor
+    $pingResult = Test-Connection -ComputerName $server -Count 2 -ErrorAction SilentlyContinue
+
+    if ($pingResult) {
+        Write-Log "Servidor $server está ativo." -Color [ConsoleColor]::Green
+
+        Write-Log "Iniciando o processo de desinstalação no servidor $server..."
+
+        try {
+            # Criar diretório de destino se não existir
+            Invoke-Command -ComputerName $server -ScriptBlock {
+                $destinationPath = "C:\Temp\DellNetWorker"
+                if (-not (Test-Path $destinationPath)) {
+                    New-Item -Path $destinationPath -ItemType Directory
+                }
+            }
+
+            # Copiar o instalador para o servidor
+            Write-Log "Copiando o instalador para $server..."
+            Copy-Item -Path $installerSourcePath -Destination "\\$server\C$\Temp\DellNetWorker\dellnetworker.exe" -Force
+
+            # Parar os serviços do NetWorker
+            Write-Log "Parando os serviços do NetWorker no servidor $server..."
+            Invoke-Command -ComputerName $server -ScriptBlock {
+                Stop-Service -Name "nsrexecd" -Force -ErrorAction SilentlyContinue
+                Stop-Service -Name "nwui" -Force -ErrorAction SilentlyContinue
+            }
+
+            # Executar o desinstalador
+            Write-Log "Executando o desinstalador no servidor $server..."
+            $uninstallResult = Invoke-Command -ComputerName $server -ScriptBlock {
+                param($installer)
+                Start-Process -FilePath $installer -ArgumentList "/uninstall", "/quiet", "/norestart" -Wait -PassThru
+            } -ArgumentList $installerDestinationPath
+
+            # Verificar o resultado da desinstalação
+            if ($uninstallResult.ExitCode -eq 0) {
+                Write-Log "Desinstalação do Dell NetWorker no servidor $server concluída com sucesso." -Color [ConsoleColor]::Green
+            } else {
+                Write-Log "Falha na desinstalação do Dell NetWorker no servidor $server. Código de saída: $($uninstallResult.ExitCode)" -Color [ConsoleColor]::Red
+            }
+        } catch {
+            Write-Log "Erro ao tentar desinstalar o Dell NetWorker no servidor $server. Detalhes: $_" -Color [ConsoleColor]::Red
+        }
+    } else {
+        Write-Log "Servidor $server não está acessível." -Color [ConsoleColor]::Red
+    }
+}
+
+Write-Log "Processo de desinstalação concluído."
