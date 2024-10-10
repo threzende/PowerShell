@@ -1,0 +1,46 @@
+# Definir a política de execução para 'Bypass' temporariamente
+Set-ExecutionPolicy Bypass -Scope Process -Force
+
+# Nome do programa que deseja desinstalar (substitua conforme necessário)
+$programName = "Dell Network Client"
+
+# Caminho para o log
+$logPath = "C:\Temp\dellnetworkerlog.txt"
+
+# Verificar se a pasta C:\Temp existe, caso contrário, criar
+if (-not (Test-Path "C:\Temp")) {
+    New-Item -Path "C:\Temp" -ItemType Directory
+}
+
+# Função para escrever no log
+function Write-Log {
+    param (
+        [string]$message
+    )
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    Add-Content -Path $logPath -Value "$timestamp - $message"
+}
+
+# Iniciar o processo de desinstalação e log
+Write-Log "Iniciando o processo de desinstalação do $programName..."
+
+# Obter a lista de programas instalados que correspondem ao nome especificado
+$installedProgram = Get-WmiObject -Class Win32_Product | Where-Object { $_.Name -like "*$programName*" }
+
+if ($installedProgram) {
+    # Se o programa foi encontrado, desinstalar
+    foreach ($program in $installedProgram) {
+        Write-Host "Desinstalando $($program.Name)..."
+        $uninstallResult = $program.Uninstall()
+
+        if ($uninstallResult.ReturnValue -eq 0) {
+            Write-Log "Desinstalação do $($program.Name) concluída com sucesso."
+        } else {
+            Write-Log "Falha na desinstalação do $($program.Name). Código de retorno: $($uninstallResult.ReturnValue)"
+        }
+    }
+} else {
+    Write-Log "Programa $programName não encontrado."
+}
+
+Write-Log "Processo de desinstalação concluído."
