@@ -1,0 +1,17 @@
+$serverList = Get-Content -Path "C:\temp\thsfz"
+$logFilePath = "C:\temp\dellNWlogz.txt"
+
+foreach ($server in $serverList) {
+    try {
+        $uninstallProcess = Invoke-Command -ComputerName $server -ScriptBlock {
+            Start-Process "msiexec.exe" -ArgumentList "/x {GUID_OF_NETWORKER_INSTALLATION} /qn" -Wait -NoNewWindow
+        }
+        $status = "Sucesso: Desinstalação do Dell NetWorker concluída no servidor $server."
+        Write-Output $status
+        Add-Content -Path $logFilePath -Value $status
+    } catch {
+        $status = "Erro: Falha ao desinstalar o Dell NetWorker no servidor $server. Detalhes do erro: $_"
+        Write-Output $status
+        Add-Content -Path $logFilePath -Value $status
+    }
+}
