@@ -1,6 +1,6 @@
-$serverList = Get-Content -Path "C:\serverz.txt"
+$serverList = Get-Content -Path "C:\temp\serverz.txt"
 foreach ($server in $serverList) {
     Invoke-Command -ComputerName $server -ScriptBlock {
         Start-Process "msiexec.exe" -ArgumentList "/x {GUID_OF_NETWORKER_INSTALLATION}" -Wait -NoNewWindow
-    } -Credential (Get-Credential)
+    }
 }
