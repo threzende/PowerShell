@@ -30,34 +30,29 @@ $servers = Get-Content -Path $serverListPath
 foreach ($server in $servers) {
     Write-Log "Starting uninstall process on server $server..."
 
-    try {
-        Invoke-Command -ComputerName $server -ScriptBlock {
-            $destinationPath = "C:\Temp\DellNetWorker"
-            if (-not (Test-Path $destinationPath)) {
-                New-Item -Path $destinationPath -ItemType Directory
-            }
+    Invoke-Command -ComputerName $server -ScriptBlock {
+        $destinationPath = "C:\Temp\DellNetWorker"
+        if (-not (Test-Path $destinationPath)) {
+            New-Item -Path $destinationPath -ItemType Directory
         }
-
-        Write-Log "Copying installer to $server..."
-        Copy-Item -Path $installerSourcePath -Destination "\\$server\C$\Temp\DellNetWorker\dellnetworker.exe" -Force
-
-        Write-Log "Stopping NetWorker services on server $server..."
-        Invoke-Command -ComputerName $server -ScriptBlock {
-            Stop-Service -Name "nsrexecd" -Force -ErrorAction SilentlyContinue
-            Stop-Service -Name "nwui" -Force -ErrorAction SilentlyContinue
-        }
-
-        Write-Log "Executing uninstaller on server $server..."
-        $uninstallResult = Invoke-Command -ComputerName $server -ScriptBlock {
-            param($installer)
-            Start-Process -FilePath $installer -ArgumentList "/uninstall", "/quiet", "/norestart" -Wait -PassThru
-        } -ArgumentList $installerDestinationPath
-
-        # Apenas reporta sucesso sem verificar códigos de saída
-        Write-Log "Dell NetWorker uninstalled successfully on server $server."
-    } catch {
-        Write-Log "Error trying to uninstall Dell NetWorker on server $server. Details: $_"
     }
+
+    Write-Log "Copying installer to $server..."
+    Copy-Item -Path $installerSourcePath -Destination "\\$server\C$\Temp\DellNetWorker\dellnetworker.exe" -Force
+
+    Write-Log "Stopping NetWorker services on server $server..."
+    Invoke-Command -ComputerName $server -ScriptBlock {
+        Stop-Service -Name "nsrexecd" -Force -ErrorAction SilentlyContinue
+        Stop-Service -Name "nwui" -Force -ErrorAction SilentlyContinue
+    }
+
+    Write-Log "Executing uninstaller on server $server..."
+    Invoke-Command -ComputerName $server -ScriptBlock {
+        param($installer)
+        Start-Process -FilePath $installer -ArgumentList "/uninstall", "/quiet", "/norestart" -Wait
+    } -ArgumentList $installerDestinationPath
+
+    Write-Log "Dell NetWorker uninstalled successfully on server $server."
 }
 
-Write-Log "Process completed."
+Write-Log "Uninstallation process completed."
