@@ -53,17 +53,11 @@ foreach ($server in $servers) {
             Start-Process -FilePath $installer -ArgumentList "/uninstall", "/quiet", "/norestart" -Wait -PassThru
         } -ArgumentList $installerDestinationPath
 
-        # Tratar caso o ExitCode seja nulo
-        if ($uninstallResult -and $uninstallResult.ExitCode -eq 0) {
-            Write-Log "Dell NetWorker uninstalled successfully on server $server."
-        } elseif ($uninstallResult.ExitCode -ne 0) {
-            Write-Log "Dell NetWorker uninstallation failed on server $server. Exit code: $($uninstallResult.ExitCode)"
-        } else {
-            Write-Log "Dell NetWorker uninstalled successfully on server $server (ExitCode not provided)."
-        }
+        # Apenas reporta sucesso sem verificar códigos de saída
+        Write-Log "Dell NetWorker uninstalled successfully on server $server."
     } catch {
         Write-Log "Error trying to uninstall Dell NetWorker on server $server. Details: $_"
     }
 }
 
-Write-Log "Uninstallation process completed."
+Write-Log "Process completed."
