@@ -1,0 +1,69 @@
+Set-ExecutionPolicy Bypass -Scope Process -Force
+
+$directoryPath = "C:\Temp\DellNetWorker"
+$logPath = "$directoryPath\dellnetworkerlog.txt"
+$serverListPath = "$directoryPath\serverz.txt"
+$installerSourcePath = "$directoryPath\dellnetworker.exe"
+$installerDestinationPath = "C:\Temp\DellNetWorker\dellnetworker.exe"
+
+if (-not (Test-Path $directoryPath)) {
+    New-Item -Path $directoryPath -ItemType Directory
+}
+
+function Write-Log {
+    param (
+        [string]$message
+    )
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $logMessage = "$timestamp - $message"
+    Add-Content -Path $logPath -Value $logMessage
+    Write-Host $logMessage
+}
+
+if (-not (Test-Path $serverListPath)) {
+    Write-Log "Server list file not found at $serverListPath."
+    exit
+}
+
+$servers = Get-Content -Path $serverListPath
+
+foreach ($server in $servers) {
+    Write-Log "Starting uninstall process on server $server..."
+
+    try {
+        Invoke-Command -ComputerName $server -ScriptBlock {
+            $destinationPath = "C:\Temp\DellNetWorker"
+            if (-not (Test-Path $destinationPath)) {
+                New-Item -Path $destinationPath -ItemType Directory
+            }
+        }
+
+        Write-Log "Copying installer to $server..."
+        Copy-Item -Path $installerSourcePath -Destination "\\$server\C$\Temp\DellNetWorker\dellnetworker.exe" -Force
+
+        Write-Log "Stopping NetWorker services on server $server..."
+        Invoke-Command -ComputerName $server -ScriptBlock {
+            Stop-Service -Name "nsrexecd" -Force -ErrorAction SilentlyContinue
+            Stop-Service -Name "nwui" -Force -ErrorAction SilentlyContinue
+        }
+
+        Write-Log "Executing uninstaller on server $server..."
+        $uninstallResult = Invoke-Command -ComputerName $server -ScriptBlock {
+            param($installer)
+            Start-Process -FilePath $installer -ArgumentList "/uninstall", "/quiet", "/norestart" -Wait -PassThru
+        } -ArgumentList $installerDestinationPath
+
+        # Tratar caso o ExitCode seja nulo
+        if ($uninstallResult -and $uninstallResult.ExitCode -eq 0) {
+            Write-Log "Dell NetWorker uninstalled successfully on server $server."
+        } elseif ($uninstallResult.ExitCode -ne 0) {
+            Write-Log "Dell NetWorker uninstallation failed on server $server. Exit code: $($uninstallResult.ExitCode)"
+        } else {
+            Write-Log "Dell NetWorker uninstalled successfully on server $server (ExitCode not provided)."
+        }
+    } catch {
+        Write-Log "Error trying to uninstall Dell NetWorker on server $server. Details: $_"
+    }
+}
+
+Write-Log "Uninstallation process completed."
