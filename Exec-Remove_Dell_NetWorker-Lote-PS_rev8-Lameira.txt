@@ -52,7 +52,7 @@ foreach ($server in $servers) {
         Start-Process -FilePath $installer -ArgumentList "/uninstall", "/quiet", "/norestart" -Wait
     } -ArgumentList $installerDestinationPath
 
-    Write-Log "Dell NetWorker uninstalled successfully on server $server."
+    #Write-Log "Dell NetWorker uninstalled successfully on server $server."
 }
 
-Write-Log "Uninstallation process completed."
+Write-Log "Process completed."
