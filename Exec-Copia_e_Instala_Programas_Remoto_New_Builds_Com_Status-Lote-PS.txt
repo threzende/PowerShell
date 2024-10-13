@@ -19,37 +19,21 @@ foreach ($servidor in $servidores) {
         try {
             # Copiando o diretório para o servidor remoto
             Copy-Item -Path $sourceFolder -Destination $destination -Recurse -Force
-
-            # Verificando se a cópia foi bem-sucedida
-            if (Test-Path $destination) {
-                Write-Host "Cópia para $servidor foi concluída com sucesso."
-
-                # Executando o script de instalação no servidor remoto
-                Invoke-Command -ComputerName $servidor -ScriptBlock {
-                    param ($destino)
-                    # Definindo o caminho do script de instalação no servidor remoto
-                    $installScript = "$destino\ONPREM\InstallALL_ONPREM.ps1"
-
-                    # Verificando se o script de instalação existe
-                    if (Test-Path $installScript) {
-                        Write-Host "Iniciando instalação no servidor $env:COMPUTERNAME..."
-                        
-                        # Setando política de execução para permitir a execução do script, se necessário
-                        Set-ExecutionPolicy RemoteSigned -Scope Process -Force
-                        
-                        # Executando o script de instalação
-                        & $installScript
-                    } else {
-                        Write-Host "Erro: O script de instalação não foi encontrado no caminho $installScript."
-                    }
-                } -ArgumentList $destination -Credential (Get-Credential)
-                
-                Write-Host "Instalação iniciada no servidor $servidor."
-            } else {
-                Write-Host "Erro: A pasta não foi copiada corretamente para $servidor."
-            }
+            Write-Host "Cópia para $servidor foi concluída com sucesso."
         } catch {
             Write-Host "Erro ao copiar para $servidor: $_"
+            continue
         }
+    }
+
+    # Agora, vamos executar o script de instalação no servidor remoto
+    try {
+        # Executando o script de instalação no servidor remoto
+        Invoke-Command -ComputerName $servidor -ScriptBlock {
+            & "C:\install_rev1\ONPREM\InstallALL_ONPREM.ps1"
+        }
+        Write-Host "Instalação iniciada no servidor $servidor."
+    } catch {
+        Write-Host "Erro ao iniciar a instalação no servidor $servidor: $_"
     }
 }
