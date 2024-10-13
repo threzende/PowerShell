@@ -1,0 +1,39 @@
+# Definindo o caminho do arquivo com a lista de servidores
+$servidoresPath = "Z:\THS\builds\serverz.txt"
+
+# Definindo o caminho da pasta de origem que será copiada
+$sourceFolder = "Z:\THS\builds\install_rev1"
+
+# Lendo a lista de servidores do arquivo
+$servidores = Get-Content $servidoresPath
+
+# Loop através de cada servidor na lista
+foreach ($servidor in $servidores) {
+    # Definindo o destino no servidor remoto (neste caso, no C:\ do servidor)
+    $destination = "\\$servidor\c$\install_rev1"
+
+    # Verificando se a pasta de destino já existe no servidor remoto
+    if (Test-Path $destination) {
+        Write-Host "A pasta já existe em $servidor. Pulando a cópia."
+    } else {
+        try {
+            # Copiando o diretório para o servidor remoto
+            Copy-Item -Path $sourceFolder -Destination $destination -Recurse -Force
+
+            # Verificando se a cópia foi bem-sucedida
+            if (Test-Path $destination) {
+                Write-Host "Cópia para $servidor foi concluída com sucesso."
+
+                # Executando o script de instalação no servidor remoto
+                Invoke-Command -ComputerName $servidor -ScriptBlock {
+                    & "C:\install_rev1\ONPREM\InstallALL_ONPREM.ps1"
+                }
+                Write-Host "Instalação iniciada no servidor $servidor."
+            } else {
+                Write-Host "Erro: A pasta não foi copiada corretamente para $servidor."
+            }
+        } catch {
+            Write-Host "Erro ao copiar para $servidor: $_"
+        }
+    }
+}
