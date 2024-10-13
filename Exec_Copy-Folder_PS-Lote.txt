@@ -2,7 +2,7 @@
 $servidoresPath = "Z:\THS\builds\serverz.txt"
 
 # Definindo o caminho da pasta de origem que será copiada
-$sourceFolder = "Z:\THS\builds\rev1"
+$sourceFolder = "Z:\THS\builds\install_rev1"
 
 # Lendo a lista de servidores do arquivo
 $servidores = Get-Content $servidoresPath
@@ -10,7 +10,7 @@ $servidores = Get-Content $servidoresPath
 # Loop através de cada servidor na lista
 foreach ($servidor in $servidores) {
     # Definindo o destino no servidor remoto (neste caso, no C:\ do servidor)
-    $destination = "\\$servidor\c$\rev1"
+    $destination = "\\$servidor\c$\install_rev1"
 
     # Verificando se a pasta de destino já existe no servidor remoto
     if (Test-Path $destination) {
