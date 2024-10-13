@@ -1,8 +1,8 @@
 # Definindo o caminho do arquivo com a lista de servidores
-$servidoresPath = "Z:\THS\builds\serverz.txt"
+$servidoresPath = "Z:\thsfz\exec_install\serverz.txt"
 
 # Definindo o caminho da pasta de origem que será copiada
-$sourceFolder = "Z:\THS\builds\install_rev1"
+$sourceFolder = "Z:\thsfz\exec_install\install_rev1"
 
 # Lendo a lista de servidores do arquivo
 $servidores = Get-Content $servidoresPath
@@ -22,18 +22,17 @@ foreach ($servidor in $servidores) {
             Write-Host "Cópia para $servidor foi concluída com sucesso."
         } catch {
             Write-Host "Erro ao copiar para $servidor: $_"
-            continue
         }
     }
 
-    # Agora, vamos executar o script de instalação no servidor remoto
-    try {
+    # Verificando se a pasta foi copiada com sucesso
+    if (Test-Path $destination) {
         # Executando o script de instalação no servidor remoto
         Invoke-Command -ComputerName $servidor -ScriptBlock {
-            & "C:\install_rev1\ONPREM\InstallALL_ONPREM.ps1"
+            & "C:\install_rev1\ONPREM\InstallALL_AWS.ps1"
         }
-        Write-Host "Instalação iniciada no servidor $servidor."
-    } catch {
-        Write-Host "Erro ao iniciar a instalação no servidor $servidor: $_"
+        Write-Host "Instalação iniciada em $servidor."
+    } else {
+        Write-Host "Cópia falhou em $servidor. Instalação não iniciada."
     }
 }
