@@ -34,7 +34,7 @@ foreach ($servidor in $servidores) {
 
                 # Definir a política de execução para permitir scripts remotos
                 Set-ExecutionPolicy RemoteSigned -Force -Scope LocalMachine
-            } -Credential (Get-Credential) -ErrorAction Stop
+            } -ErrorAction Stop
 
             Write-Host "WinRM configurado com sucesso no servidor $servidor."
         } catch {
@@ -64,8 +64,8 @@ foreach ($servidor in $servidores) {
     try {
         # Executando o script de instalação no servidor remoto
         Invoke-Command -ComputerName $servidor -ScriptBlock {
-            & "C:\install_rev1\ONPREM\InstallALL_AWS.ps1"
-        } -Credential (Get-Credential)
+            & "C:\install_rev1\AWS\InstallALL_AWS.ps1"
+        }
 
         Write-Host "Instalação iniciada no servidor $servidor."
     } catch {
