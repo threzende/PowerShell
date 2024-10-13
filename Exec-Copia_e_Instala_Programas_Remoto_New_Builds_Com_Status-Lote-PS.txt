@@ -9,6 +9,40 @@ $servidores = Get-Content $servidoresPath
 
 # Loop através de cada servidor na lista
 foreach ($servidor in $servidores) {
+    
+    # Verificando se o WinRM está configurado no servidor remoto
+    try {
+        Test-WSMan -ComputerName $servidor -ErrorAction Stop
+        Write-Host "WinRM está funcionando corretamente no servidor $servidor."
+    } catch {
+        Write-Host "Configurando o WinRM no servidor $servidor..."
+        try {
+            # Configurando o WinRM no servidor remoto
+            Invoke-Command -ComputerName $servidor -ScriptBlock {
+                # Habilitar o PowerShell Remoting
+                Enable-PSRemoting -Force
+
+                # Iniciar o serviço WinRM
+                if ((Get-Service -Name WinRM).Status -ne 'Running') {
+                    Start-Service -Name WinRM
+                }
+
+                # Configurar o listener WinRM se não estiver presente
+                if (-not (winrm enumerate winrm/config/listener)) {
+                    winrm quickconfig -Force
+                }
+
+                # Definir a política de execução para permitir scripts remotos
+                Set-ExecutionPolicy RemoteSigned -Force -Scope LocalMachine
+            } -Credential (Get-Credential) -ErrorAction Stop
+
+            Write-Host "WinRM configurado com sucesso no servidor $servidor."
+        } catch {
+            Write-Host "Erro ao configurar o WinRM no servidor $servidor: $_"
+            continue
+        }
+    }
+
     # Definindo o destino no servidor remoto (neste caso, no C:\ do servidor)
     $destination = "\\$servidor\c$\install_rev1"
 
@@ -22,17 +56,19 @@ foreach ($servidor in $servidores) {
             Write-Host "Cópia para $servidor foi concluída com sucesso."
         } catch {
             Write-Host "Erro ao copiar para $servidor: $_"
+            continue
         }
     }
 
-    # Verificando se a pasta foi copiada com sucesso
-    if (Test-Path $destination) {
+    # Agora, vamos executar o script de instalação no servidor remoto
+    try {
         # Executando o script de instalação no servidor remoto
         Invoke-Command -ComputerName $servidor -ScriptBlock {
             & "C:\install_rev1\ONPREM\InstallALL_AWS.ps1"
-        }
-        Write-Host "Instalação iniciada em $servidor."
-    } else {
-        Write-Host "Cópia falhou em $servidor. Instalação não iniciada."
+        } -Credential (Get-Credential)
+
+        Write-Host "Instalação iniciada no servidor $servidor."
+    } catch {
+        Write-Host "Erro ao iniciar a instalação no servidor $servidor: $_"
     }
 }
