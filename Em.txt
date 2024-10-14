@@ -66,3 +66,9 @@ if ($app) {
 Get-Package -Name "*Networker*" | Select-Object Name, Id
 
 
+Get-WmiObject -Class Win32_Product | Where-Object { $_.Name -like "*Networker*" } | Select-Object Name, IdentifyingNumber
+
+
+wmic product where "name like '%Networker%'" get Name, IdentifyingNumber
+
+
