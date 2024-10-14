@@ -61,3 +61,8 @@ if ($app) {
     Write-Host "Nenhum pacote correspondente encontrado."
 }
 
+
+
+Get-Package -Name "*Networker*" | Select-Object Name, Id
+
+
