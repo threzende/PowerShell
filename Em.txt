@@ -24,3 +24,6 @@ wmic product where "name like '%Networker%'" get name
 wmic product where "name like '%Networker%'" call uninstall
 
 
+
+Get-Package -Name "*Networker*" | Uninstall-Package -Force
+
