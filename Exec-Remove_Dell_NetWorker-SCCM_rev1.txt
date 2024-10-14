@@ -1,0 +1,63 @@
+# Definir a política de execução para 'Bypass' temporariamente
+Set-ExecutionPolicy Bypass -Scope Process -Force
+
+# Caminho do servidor para o arquivo de log (onde o log será armazenado)
+$logDirectory = "\\serv01\UpdateServicesPackages\Remover_DellNetworker"
+
+# Definir o nome do log com a data e hora americana
+$logFileName = "dellnetworkerlog_" + (Get-Date -Format "MM-dd-yyyy_hh-mmtt") + ".txt"
+$logPath = "$logDirectory\$logFileName"
+
+# Caminho do servidor onde o instalador está armazenado (Caminho UNC)
+$installerSourcePath = "\\serv01\UpdateServicesPackages\Remover_DellNetworker\dellnetworker.exe"
+
+# Caminho de destino no servidor local onde o SCCM vai rodar
+$installerDestinationPath = "C:\Temp\DellNetWorker\dellnetworker.exe"
+
+# Função para escrever no log e no console
+function Write-Log {
+    param (
+        [string]$message
+    )
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $logMessage = "$timestamp - $message"
+
+    # Escrever no log
+    Add-Content -Path $logPath -Value $logMessage
+
+    # Escrever no console
+    Write-Host $logMessage
+}
+
+Write-Log "Iniciando o processo de desinstalação local..."
+
+try {
+    # Criar diretório de destino local se não existir
+    if (-not (Test-Path "C:\Temp\DellNetWorker")) {
+        New-Item -Path "C:\Temp\DellNetWorker" -ItemType Directory
+    }
+
+    # Copiar o instalador do servidor \\serv01 para o local
+    Write-Log "Copiando o instalador do servidor \\serv01..."
+    Copy-Item -Path $installerSourcePath -Destination $installerDestinationPath -Force
+
+    # Parar os serviços do NetWorker
+    Write-Log "Parando os serviços do NetWorker..."
+    Stop-Service -Name "nsrexecd" -Force -ErrorAction SilentlyContinue
+    Stop-Service -Name "nwui" -Force -ErrorAction SilentlyContinue
+
+    # Executar o desinstalador
+    Write-Log "Executando o desinstalador..."
+    $uninstallResult = Start-Process -FilePath $installerDestinationPath -ArgumentList "/uninstall", "/quiet", "/norestart" -Wait -PassThru
+
+    # Verificar o resultado da desinstalação
+    if ($uninstallResult.ExitCode -eq 0) {
+        Write-Log "Desinstalação do Dell NetWorker concluída com sucesso."
+    } else {
+        Write-Log "Falha na desinstalação do Dell NetWorker. Código de saída: $($uninstallResult.ExitCode)"
+    }
+} catch {
+    Write-Log "Erro ao tentar desinstalar o Dell NetWorker. Detalhes: $_"
+}
+
+Write-Log "Processo de desinstalação concluído."
