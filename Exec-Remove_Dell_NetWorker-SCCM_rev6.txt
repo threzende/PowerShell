@@ -39,7 +39,7 @@ try {
 Write-Log "Tentando desinstalar usando wmic..."
 try {
     $wmicOutput = wmic product where "name like '%Networker%'" get IdentifyingNumber, Name
-    if ($wmicOutput) {
+    if ($wmicOutput -and $wmicOutput.Count -gt 1) {
         $lines = $wmicOutput -split "`n" | Where-Object { $_ -match '{.*}' }
         foreach ($line in $lines) {
             $identifyingNumber = $line -replace '.*{(.*?)}.*', '$1'
@@ -49,6 +49,8 @@ try {
             }
         }
         Write-Log "Desinstalação via wmic foi iniciada."
+    } elseif ($wmicOutput) {
+        Write-Log "Nenhum pacote específico encontrado usando wmic, mas a saída é válida."
     } else {
         Write-Log "Nenhum pacote encontrado usando wmic."
     }
