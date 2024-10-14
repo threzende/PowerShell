@@ -1,0 +1,69 @@
+# Função para escrever logs no console
+function Write-Log {
+    param (
+        [string]$message
+    )
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    Write-Host "$timestamp - $message"
+}
+
+# Tentativa de desinstalar usando Get-Package
+Write-Log "Tentando desinstalar usando Get-Package..."
+try {
+    $package = Get-Package -Name "*Networker*" -ErrorAction Stop
+    if ($package) {
+        Uninstall-Package -Name $package -Force -ErrorAction Stop
+        Write-Log "Desinstalação via Get-Package foi bem-sucedida."
+    } else {
+        Write-Log "Nenhum pacote encontrado usando Get-Package."
+    }
+} catch {
+    Write-Log "Erro ao tentar desinstalar via Get-Package: $_"
+}
+
+# Tentativa de desinstalar usando Get-WmiObject
+Write-Log "Tentando desinstalar usando Get-WmiObject..."
+try {
+    $app = Get-WmiObject -Class Win32_Product | Where-Object { $_.Name -like "*Networker*" }
+    if ($app) {
+        $app.Uninstall()
+        Write-Log "Desinstalação via Get-WmiObject foi iniciada."
+    } else {
+        Write-Log "Nenhum pacote encontrado usando Get-WmiObject."
+    }
+} catch {
+    Write-Log "Erro ao tentar desinstalar via Get-WmiObject: $_"
+}
+
+# Tentativa de desinstalar usando wmic
+Write-Log "Tentando desinstalar usando wmic..."
+try {
+    $wmicOutput = wmic product where "name like '%Networker%'" get IdentifyingNumber, Name
+    if ($wmicOutput) {
+        $lines = $wmicOutput -split "`n" | Where-Object { $_ -match '{.*}' }
+        foreach ($line in $lines) {
+            $identifyingNumber = $line -replace '.*{(.*?)}.*', '$1'
+            if ($identifyingNumber) {
+                Write-Log "Desinstalando $line..."
+                wmic product where "IdentifyingNumber='{$identifyingNumber}'" call uninstall
+            }
+        }
+        Write-Log "Desinstalação via wmic foi iniciada."
+    } else {
+        Write-Log "Nenhum pacote encontrado usando wmic."
+    }
+} catch {
+    Write-Log "Erro ao tentar desinstalar via wmic: $_"
+}
+
+# Tentativa de usar a ferramenta de solução de problemas
+Write-Log "Tentando executar a ferramenta de solução de problemas..."
+try {
+    $troubleshooterPath = "C:\Caminho\Para\MicrosoftProgram_Install_and_Uninstall.meta.diagcab"  # Substitua pelo caminho correto
+    Start-Process -FilePath $troubleshooterPath -Wait
+    Write-Log "A ferramenta de solução de problemas foi executada."
+} catch {
+    Write-Log "Erro ao tentar executar a ferramenta de solução de problemas: $_"
+}
+
+Write-Log "Script de desinstalação finalizado."
