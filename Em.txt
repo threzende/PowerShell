@@ -8,3 +8,19 @@ Get-WmiObject -Query "SELECT * FROM Win32_Product WHERE Name LIKE '%Networker%'"
 Get-ItemProperty "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*" | Where-Object { $_.DisplayName -like "*Networker*" }
 
 
+Get-Package -Name "*Networker*"
+
+
+Get-ItemProperty "HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*" | Where-Object { $_.DisplayName -like "*Networker*" }
+
+
+
+
+
+wmic product where "name like '%Networker%'" get name
+
+
+
+wmic product where "name like '%Networker%'" call uninstall
+
+
