@@ -1,0 +1,51 @@
+# Definir a política de execução para 'Bypass' temporariamente
+Set-ExecutionPolicy Bypass -Scope Process -Force
+
+# Função para parar serviços de forma segura
+function Stop-NetWorkerServices {
+    param (
+        [string]$serviceName
+    )
+    try {
+        Write-Host "Parando serviço: $serviceName"
+        Stop-Service -Name $serviceName -Force -ErrorAction SilentlyContinue
+    } catch {
+        Write-Host "Erro ao parar serviço: $serviceName"
+    }
+}
+
+# Parar todos os serviços do NetWorker
+Stop-NetWorkerServices -serviceName "nsrexecd"
+Stop-NetWorkerServices -serviceName "nwui"
+Stop-NetWorkerServices -serviceName "gstd"
+Stop-NetWorkerServices -serviceName "emcgstwebserver"
+Stop-NetWorkerServices -serviceName "emcgstsnmptrapd"
+Stop-NetWorkerServices -serviceName "nwui"
+
+# Procurar e desinstalar pacotes do NetWorker
+$networkerPackages = Get-WmiObject -Class Win32_Product | Where-Object { $_.Vendor -eq 'Dell EMC' }
+
+if ($networkerPackages) {
+    foreach ($package in $networkerPackages) {
+        try {
+            Write-Host "Desinstalando pacote: $($package.Name)"
+            $package.IdentifyingNumber | ForEach-Object {
+                & wmic product where "IdentifyingNumber='$_'" call uninstall /nointeractive
+            }
+            Write-Host "Pacote $($package.Name) desinstalado com sucesso."
+        } catch {
+            Write-Host "Erro ao desinstalar pacote: $($package.Name)"
+        }
+    }
+} else {
+    Write-Host "Nenhum pacote do NetWorker encontrado para desinstalar."
+}
+
+# Verificar se os serviços foram removidos
+$remainingServices = sc query state=all | findstr /r /c:"NetWorker" /c:"EMC"
+foreach ($service in $remainingServices) {
+    $serviceName = $service.Split(" ")[-1]
+    sc delete $serviceName
+}
+
+Write-Host "Processo de desinstalação do NetWorker concluído."
