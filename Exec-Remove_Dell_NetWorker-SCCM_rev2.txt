@@ -1,0 +1,49 @@
+# Definir a política de execução para 'Bypass' temporariamente
+Set-ExecutionPolicy Bypass -Scope Process -Force
+
+# Caminho do servidor para o arquivo de log (onde o log será armazenado)
+$logDirectory = "\\serv01\UpdateServicesPackages\Remover_DellNetworker"
+
+# Definir o nome do log com a data e hora americana
+$logFileName = "dellnetworkerlog_" + (Get-Date -Format "MM-dd-yyyy_hh-mmtt") + ".txt"
+$logPath = "$logDirectory\$logFileName"
+
+# Função para escrever no log
+function Write-Log {
+    param (
+        [string]$message
+    )
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $logMessage = "$timestamp - $message"
+    Add-Content -Path $logPath -Value $logMessage
+}
+
+Write-Log "Iniciando o processo de desinstalação local..."
+
+try {
+    # Parar os serviços do NetWorker antes de desinstalar
+    Write-Log "Parando os serviços do NetWorker..."
+    Stop-Service -Name "nsrexecd" -Force -ErrorAction SilentlyContinue
+    Stop-Service -Name "nwui" -Force -ErrorAction SilentlyContinue
+
+    # Procurar o programa "NetWorker" no "Programs and Features" e desinstalar
+    Write-Log "Procurando programas que contenham 'NetWorker' para desinstalar..."
+
+    $networkerPrograms = Get-WmiObject -Class Win32_Product | Where-Object { $_.Name -like "*NetWorker*" }
+
+    if ($networkerPrograms) {
+        foreach ($program in $networkerPrograms) {
+            Write-Log "Desinstalando o programa: $($program.Name)..."
+            $program.Uninstall() | Out-Null
+
+            Write-Log "Programa $($program.Name) desinstalado com sucesso."
+        }
+    } else {
+        Write-Log "Nenhum programa contendo 'NetWorker' encontrado para desinstalar."
+    }
+    
+} catch {
+    Write-Log "Erro ao tentar desinstalar o Dell NetWorker. Detalhes: $_"
+}
+
+Write-Log "Processo de desinstalação concluído."
