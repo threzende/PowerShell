@@ -4,3 +4,7 @@ Get-WmiObject -Class Win32_Product | Where-Object { $_.Name -like "*NetWorker*" 
 
 Get-WmiObject -Query "SELECT * FROM Win32_Product WHERE Name LIKE '%Networker%'"
 
+
+Get-ItemProperty "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*" | Where-Object { $_.DisplayName -like "*Networker*" }
+
+
