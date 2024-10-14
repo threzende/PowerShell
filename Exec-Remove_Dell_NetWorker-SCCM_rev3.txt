@@ -1,0 +1,37 @@
+# Definir a política de execução para 'Bypass' temporariamente
+Set-ExecutionPolicy Bypass -Scope Process -Force
+
+# Função para parar serviços de forma segura
+function Stop-NetWorkerServices {
+    param (
+        [string]$serviceName
+    )
+    try {
+        Write-Host "Parando serviço: $serviceName"
+        Stop-Service -Name $serviceName -Force -ErrorAction SilentlyContinue
+    } catch {
+        Write-Host "Erro ao parar serviço: $serviceName"
+    }
+}
+
+# Parar os serviços do NetWorker antes de desinstalar
+Stop-NetWorkerServices -serviceName "nsrexecd"
+Stop-NetWorkerServices -serviceName "nwui"
+
+# Procurar o programa "NetWorker" no "Programs and Features" e desinstalar
+$networkerPrograms = Get-WmiObject -Class Win32_Product | Where-Object { $_.Name -like "*NetWorker*" }
+if ($networkerPrograms) {
+    foreach ($program in $networkerPrograms) {
+        try {
+            Write-Host "Desinstalando programa: $($program.Name)"
+            $program.Uninstall() | Out-Null
+            Write-Host "Programa $($program.Name) desinstalado com sucesso."
+        } catch {
+            Write-Host "Erro ao desinstalar programa: $($program.Name)"
+        }
+    }
+} else {
+    Write-Host "Nenhum programa contendo 'NetWorker' encontrado para desinstalar."
+}
+
+Write-Host "Processo de desinstalação concluído."
