@@ -38,14 +38,16 @@ $app.Uninstall()
 
 
 
-
-# Procura por aplicativos cujo nome contém "Networker"
-$app = Get-WmiObject -Class Win32_Product | Where-Object { 
-    $_.Name -match "Networker" 
+# Executar como administrador
+$app = Get-CimInstance -ClassName Win32_Product | Where-Object { 
+    $_.Name -like "*Networker*" 
 }
 
-# Verifica se o aplicativo foi encontrado e, em caso afirmativo, o desinstala
 if ($app) {
+    # Parar serviços do NetWorker antes de desinstalar
+    Stop-Service -Name "nsrexecd" -Force -ErrorAction SilentlyContinue
+    Stop-Service -Name "nwui" -Force -ErrorAction SilentlyContinue
+    
     foreach ($item in $app) {
         try {
             Write-Host "Desinstalando $($item.Name)..."
@@ -58,3 +60,4 @@ if ($app) {
 } else {
     Write-Host "Nenhum pacote correspondente encontrado."
 }
+
