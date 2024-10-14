@@ -27,3 +27,34 @@ wmic product where "name like '%Networker%'" call uninstall
 
 Get-Package -Name "*Networker*" | Uninstall-Package -Force
 
+
+
+$app = Get-WmiObject -Class Win32_Product | Where-Object { 
+    $_.Name -match "Software Name" 
+}
+
+$app.Uninstall()
+
+
+
+
+
+# Procura por aplicativos cujo nome contém "Networker"
+$app = Get-WmiObject -Class Win32_Product | Where-Object { 
+    $_.Name -match "Networker" 
+}
+
+# Verifica se o aplicativo foi encontrado e, em caso afirmativo, o desinstala
+if ($app) {
+    foreach ($item in $app) {
+        try {
+            Write-Host "Desinstalando $($item.Name)..."
+            $item.Uninstall()
+            Write-Host "Desinstalação de $($item.Name) concluída."
+        } catch {
+            Write-Host "Erro ao desinstalar $($item.Name): $_"
+        }
+    }
+} else {
+    Write-Host "Nenhum pacote correspondente encontrado."
+}
