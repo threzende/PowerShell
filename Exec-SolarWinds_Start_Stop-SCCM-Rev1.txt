@@ -1,0 +1,11 @@
+# Nome do serviço
+$serviceName = "SolarWindsAgent64"
+
+# Parar o serviço
+Stop-Service -Name $serviceName -Force
+
+# Aguardar 10 segundos
+Start-Sleep -Seconds 10
+
+# Iniciar o serviço
+Start-Service -Name $serviceName
