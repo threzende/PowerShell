@@ -5,3 +5,12 @@ $destination = "X:\pastuser02"
 $report = "C:\log_robocopy.txt"
 
 robocopy $source $destination /E /COPYALL /ZB /R:3 /W:5 /V /LOG:$report /TEE
+
+
+@echo off
+set "source=Y:\pastuser01\docs"
+set "destination=X:\pastuser02"
+set "report=C:\log_robocopy.txt"
+
+robocopy "%source%" "%destination%" /E /COPYALL /ZB /R:3 /W:5 /V /LOG:"%report%" /TEE
+
