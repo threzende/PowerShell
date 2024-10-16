@@ -1,10 +1,7 @@
-# Definindo a política de execução para permitir a execução de scripts
 Set-ExecutionPolicy Bypass -Scope Process -Force
 
-# Definindo variáveis
-$origem = "Y:\pastuser01"
-$destino = "X:\pastuser02"
+$source = "Y:\pastuser01"
+$destination = "X:\pastuser02"
 $report = "C:\log_robocopy.txt"
 
-# Comando Robocopy
-robocopy $origem $destino /E /COPYALL /ZB /R:3 /W:5 /V /LOG:$report /TEE
+robocopy $source $destination /E /COPYALL /ZB /R:3 /W:5 /V /LOG:$report /TEE
