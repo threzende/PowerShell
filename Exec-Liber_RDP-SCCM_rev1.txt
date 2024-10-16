@@ -1,0 +1,3 @@
+# Habilitar Remote Desktop
+Set-ExecutionPolicy Bypass -Scope Process -Force
+Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name 'fDenyTSConnections' -Value 0
