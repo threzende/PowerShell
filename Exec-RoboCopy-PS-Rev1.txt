@@ -14,3 +14,20 @@ set "report=C:\log_robocopy.txt"
 
 robocopy "%source%" "%destination%" /E /COPYALL /ZB /R:3 /W:5 /V /LOG:"%report%" /TEE
 
+
+
+Set-ExecutionPolicy Bypass -Scope Process -Force
+
+$source = "Y:\pastuser01\docs"
+$destination = "X:\pastuser02"
+$report = "C:\log_robocopy.txt"
+
+# Verifica se o diretório do log existe e cria se necessário
+$logDirectory = Split-Path $report -Parent
+if (-not (Test-Path $logDirectory)) {
+    New-Item -ItemType Directory -Path $logDirectory -Force
+}
+
+# Executa o comando Robocopy
+robocopy $source $destination /E /COPYALL /ZB /R:3 /W:5 /V /LOG:$report /TEE
+
