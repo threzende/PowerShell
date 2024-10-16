@@ -1,0 +1,15 @@
+# Define a máquina remota que deseja verificar
+$remoteComputer = "NOME_DA_MAQUINA_REMOTA"
+
+# Comando para rodar na máquina remota
+Invoke-Command -ComputerName $remoteComputer -ScriptBlock {
+    # Verifica o status do serviço TermService
+    $serviceStatus = Get-Service -Name "TermService"
+    
+    # Verifica se o serviço está rodando e retorna a mensagem
+    if ($serviceStatus.Status -eq 'Running') {
+        Write-Host "$(Get-Date) - TermService está ativo no computador $env:COMPUTERNAME." -ForegroundColor Green
+    } else {
+        Write-Host "$(Get-Date) - TermService NÃO está ativo no computador $env:COMPUTERNAME." -ForegroundColor Red
+    }
+}
