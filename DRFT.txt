@@ -1,7 +1,5 @@
-$javaPath = (Get-Command java).Source
-$javaArch = & $javaPath -version 2>&1 | Select-String -Pattern "64-Bit"
-if ($javaArch) {
-    Write-Output "64-bit"
-} else {
-    Write-Output "32-bit"
-}
+$username = "Domain\Username"
+$password = ConvertTo-SecureString "YourPassword" -AsPlainText -Force
+$credential = New-Object System.Management.Automation.PSCredential ($username, $password)
+
+Test-ComputerSecureChannel -Repair -Credential $credential
