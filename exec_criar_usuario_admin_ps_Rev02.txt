@@ -1,0 +1,5 @@
+# Cria o usuário diretamente com nome e senha especificados
+New-LocalUser -Name "admintemp" -Password (ConvertTo-SecureString "password123" -AsPlainText -Force) -FullName "Temporary Admin" -Description "Temporary administrative user"
+
+# Adiciona o usuário ao grupo Administrators
+Add-LocalGroupMember -Group "Administrators" -Member "admintemp"
