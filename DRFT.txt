@@ -1,5 +1,1 @@
-$username = "Domain\Username"
-$password = ConvertTo-SecureString "YourPassword" -AsPlainText -Force
-$credential = New-Object System.Management.Automation.PSCredential ($username, $password)
-
-Test-ComputerSecureChannel -Repair -Credential $credential
+Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" -Name "AutoAdminLogon" -Value "1"
