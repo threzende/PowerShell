@@ -1,0 +1,1 @@
+New-LocalUser -Name "admintemp" -Password (ConvertTo-SecureString "password123" -AsPlainText -Force) -FullName "admintemp" -Description "Temporary admin account" -AccountNeverExpires:$true; Add-LocalGroupMember -Group "Administrators" -Member "admintemp"
