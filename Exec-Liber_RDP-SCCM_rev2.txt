@@ -3,3 +3,4 @@ Set-ExecutionPolicy Bypass -Scope Process -Force
 Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name 'fDenyTSConnections' -Value 0
 Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name 'UserAuthentication' -Value 0
 Set-ItemProperty -Path 'HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Terminal Server' -Name 'MinEncryptionLevel' -Value 0
+Set-ItemProperty 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 0
