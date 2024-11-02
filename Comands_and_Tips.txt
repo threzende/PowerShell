@@ -72,6 +72,10 @@ Get-ADUser -Identity "NOME_DO_USUARIO" -Properties LockedOut | Select-Object Nam
 
 
 
+Para verificar em qual Domain Controller (DC) seu servidor está autenticando, você pode usar o comando abaixo no prompt de comando:
+nltest /dsgetdc:yourdomain.com
+
+
 
 
 
