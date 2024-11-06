@@ -13,3 +13,19 @@ foreach ($server in $servers) {
     Start-Process "perfmon.exe" "/res"
     Add-Counter -Counter $counterPath
 }
+
+
+
+$servers = Get-Content -Path "C:\temp\thsfz\serverz.txt"
+
+# Abrir Performance Monitor para CPU
+Start-Process "perfmon.exe"
+
+# Aguardar alguns segundos para garantir que o Perfmon esteja totalmente carregado
+Start-Sleep -Seconds 5
+
+foreach ($server in $servers) {
+    $cpuCounterPath = "\\$server\Processor(_Total)\% Processor Time"
+    # Adicionar contador de CPU
+    Add-Counter -Counter $cpuCounterPath
+}
