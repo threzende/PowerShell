@@ -53,3 +53,37 @@ $perfmonConfigCpuContent | Set-Content -Path $perfmonConfigCpu
 
 # Executar Perfmon com a configuração para CPU
 Start-Process "perfmon.exe" -ArgumentList "/C:C:\temp\CPU_Perfmon_Config.blg"
+
+
+
+
+
+
+
+# Carregar servidores do arquivo
+$servers = Get-Content "C:\temp\thsfz\serverz.txt"
+
+# Abrir o PerfMon
+Start-Process "perfmon.exe"
+
+# Aguardar PerfMon abrir completamente (isso pode precisar de alguns segundos dependendo da máquina)
+Start-Sleep -Seconds 5
+
+# Adicionar contadores para cada servidor (isso precisará ser feito manualmente)
+foreach ($server in $servers) {
+    # Usando WMI para pegar informações de CPU
+    try {
+        $cpuUsage = Get-WmiObject -Class Win32_Processor -ComputerName $server | Select-Object -ExpandProperty LoadPercentage
+        if ($cpuUsage) {
+            Write-Host "Adicionando servidor $server ao PerfMon..."
+            # Informações de contadores que você gostaria de adicionar
+            # Isso ainda precisa ser feito manualmente dentro do PerfMon
+            # Você deve adicionar os contadores de CPU dentro da interface gráfica
+        }
+    } catch {
+        Write-Warning "Não foi possível conectar ao servidor $server"
+    }
+}
+
+Write-Host "PerfMon foi aberto. Agora, adicione os contadores manualmente."
+
