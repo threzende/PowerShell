@@ -1,0 +1,15 @@
+$servers = Get-Content -Path "C:\temp\thsfz\serverz.txt"
+foreach ($server in $servers) {
+    $counterPath = "\\$server\Processor(_Total)\% Processor Time"
+    Start-Process "perfmon.exe" "/res"
+    Add-Counter -Counter $counterPath
+}
+
+
+
+$servers = Get-Content -Path "C:\temp\thsfz\serverz.txt"
+foreach ($server in $servers) {
+    $counterPath = "\\$server\Memory\Available MBytes"
+    Start-Process "perfmon.exe" "/res"
+    Add-Counter -Counter $counterPath
+}
