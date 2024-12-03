@@ -1,0 +1,41 @@
+# Verificar a versão do Microsoft Edge
+$edgeVersion = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Edge\BLBeacon" -ErrorAction SilentlyContinue).version
+if (-not $edgeVersion) {
+    $edgeVersion = "Microsoft Edge não está instalado"
+}
+
+# Verificar se a KB 5046616 está instalada
+$kb1 = Get-HotFix -Id KB5046616 -ErrorAction SilentlyContinue
+if ($kb1) {
+    $kb1Status = "KB5046616 está instalada. Data: $($kb1.InstalledOn)"
+} else {
+    $kb1Status = "KB5046616 NÃO está instalada."
+}
+
+# Verificar se uma KB fictícia está instalada (por exemplo, KB9999999)
+$kb2 = Get-HotFix -Id KB9999999 -ErrorAction SilentlyContinue
+if ($kb2) {
+    $kb2Status = "KB9999999 está instalada. Data: $($kb2.InstalledOn)"
+} else {
+    $kb2Status = "KB9999999 NÃO está instalada."
+}
+
+# Criar o conteúdo do relatório
+$reportContent = @"
+Relatório de Atualizações e Versões
+===================================
+Servidor: $($env:COMPUTERNAME)
+
+KB 5046616:
+$kb1Status
+
+KB 9999999:
+$kb2Status
+
+Versão do Microsoft Edge:
+$edgeVersion
+===================================
+"@
+
+# Exibir o relatório no console
+Write-Output $reportContent
