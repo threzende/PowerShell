@@ -1,0 +1,61 @@
+# Função para buscar a versão do Microsoft Edge
+function Get-EdgeVersion {
+    # Inicializar variável para a versão
+    $edgeVersion = $null
+
+    # Caminhos possíveis no registro (Painel de Controle e Apps instalados)
+    $possiblePaths = @(
+        "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*",
+        "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*"
+    )
+
+    # Buscar nos registros de aplicativos instalados
+    foreach ($path in $possiblePaths) {
+        try {
+            $edgeInfo = Get-ItemProperty -Path $path -ErrorAction SilentlyContinue |
+                Where-Object { $_.DisplayName -like "Microsoft Edge*" }
+            if ($edgeInfo) {
+                $edgeVersion = $edgeInfo.DisplayVersion
+                break
+            }
+        } catch {
+            # Ignorar erros e continuar buscando
+        }
+    }
+
+    # Se a versão ainda não foi encontrada, retornar mensagem padrão
+    if (-not $edgeVersion) {
+        return "Microsoft Edge não está instalado ou não foi encontrado."
+    }
+
+    # Retornar a versão encontrada
+    return $edgeVersion
+}
+
+# Obter a versão do Microsoft Edge
+$edgeVersion = Get-EdgeVersion
+
+# Verificar se a KB 5046616 está instalada
+$kb1 = Get-HotFix -Id KB5046616 -ErrorAction SilentlyContinue
+if ($kb1) {
+    $kb1Status = "KB5046616 está instalada. Data: $($kb1.InstalledOn)"
+} else {
+    $kb1Status = "KB5046616 NÃO está instalada."
+}
+
+# Criar o conteúdo do relatório sem quebras de linha problemáticas
+$reportContent = @(
+    "Relatório de Atualizações e Versões",
+    "===================================",
+    "Servidor: $($env:COMPUTERNAME)",
+    "",
+    "KB 5046616:",
+    $kb1Status,
+    "",
+    "Versão do Microsoft Edge:",
+    $edgeVersion,
+    "==================================="
+)
+
+# Exibir o relatório diretamente no output do SCCM
+Write-Output ($reportContent -join "`n")
