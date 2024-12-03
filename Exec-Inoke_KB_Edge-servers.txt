@@ -1,0 +1,23 @@
+# Lista de servidores onde o script será executado
+$servers = @("Server1", "Server2") # Substitua pelos nomes ou IPs dos servidores
+
+# Script que será executado remotamente
+$scriptBlock = {
+    # Verificar se a KB está instalada
+    $kb = Get-HotFix -Id KB5046616 -ErrorAction SilentlyContinue
+    if ($kb) {
+        Write-Output "KB5046616 está instalada. Data: $($kb.InstalledOn)"
+    } else {
+        Write-Output "KB5046616 NÃO está instalada."
+    }
+
+    # Verificar a versão do Microsoft Edge
+    $edgeVersion = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Edge\BLBeacon").version
+    Write-Output "Versão do Microsoft Edge: $edgeVersion"
+}
+
+# Executar o script remotamente
+foreach ($server in $servers) {
+    Write-Output "Conectando ao servidor: $server"
+    Invoke-Command -ComputerName $server -ScriptBlock $scriptBlock -Credential (Get-Credential)
+}
