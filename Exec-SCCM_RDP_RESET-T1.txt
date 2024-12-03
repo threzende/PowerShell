@@ -1,0 +1,18 @@
+# Nome do serviço de RDP
+$rdpServiceName = "TermService"
+
+# Verificar se o serviço está presente
+$service = Get-Service -Name $rdpServiceName -ErrorAction SilentlyContinue
+
+if ($service) {
+    # Reiniciar o serviço
+    try {
+        Write-Output "Reiniciando o serviço RDP ($rdpServiceName)..."
+        Restart-Service -Name $rdpServiceName -Force -ErrorAction Stop
+        Write-Output "Serviço RDP reiniciado com sucesso."
+    } catch {
+        Write-Output "Erro ao reiniciar o serviço RDP: $($_.Exception.Message)"
+    }
+} else {
+    Write-Output "O serviço RDP ($rdpServiceName) não foi encontrado nesta máquina."
+}
