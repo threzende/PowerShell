@@ -1,0 +1,38 @@
+# Caminho para salvar o relatório
+$reportPath = "\\serv01\temp\report\sccm01.txt"
+
+# Verificar a versão do Microsoft Edge
+$edgeVersion = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Edge\BLBeacon" -ErrorAction SilentlyContinue).version
+if (-not $edgeVersion) {
+    $edgeVersion = "Microsoft Edge não está instalado"
+}
+
+# Verificar se a KB 5046616 está instalada
+$kb = Get-HotFix -Id KB5046616 -ErrorAction SilentlyContinue
+if ($kb) {
+    $kbStatus = "KB5046616 está instalada. Data: $($kb.InstalledOn)"
+} else {
+    $kbStatus = "KB5046616 NÃO está instalada."
+}
+
+# Criar o relatório
+$reportContent = @"
+Relatório de Atualizações e Versões
+===================================
+Servidor: $($env:COMPUTERNAME)
+
+KB 5046616:
+$kbStatus
+
+Versão do Microsoft Edge:
+$edgeVersion
+===================================
+"@
+
+# Salvar o relatório
+try {
+    $reportContent | Out-File -FilePath $reportPath -Encoding UTF8 -Force
+    Write-Output "Relatório salvo com sucesso em: $reportPath"
+} catch {
+    Write-Output "Erro ao salvar o relatório: $($_.Exception.Message)"
+}
