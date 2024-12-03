@@ -1,5 +1,26 @@
-# Caminho para salvar o relatório
-$reportPath = "\\serv01\temp\report\sccm01.txt"
+# Caminho base do relatório
+$basePath = "\\serv01\temp\report"
+$baseFileName = "sccm"
+$fileExtension = ".txt"
+
+# Função para gerar um nome de arquivo único
+function Get-UniqueFilePath {
+    param (
+        [string]$basePath,
+        [string]$baseFileName,
+        [string]$fileExtension
+    )
+    
+    $counter = 1
+    do {
+        $fileName = "$basePath\$baseFileName$('{0:D2}' -f $counter)$fileExtension"
+        $counter++
+    } while (Test-Path $fileName)
+    return $fileName
+}
+
+# Gerar o caminho do relatório com nome único
+$reportPath = Get-UniqueFilePath -basePath $basePath -baseFileName $baseFileName -fileExtension $fileExtension
 
 # Verificar a versão do Microsoft Edge
 $edgeVersion = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Edge\BLBeacon" -ErrorAction SilentlyContinue).version
