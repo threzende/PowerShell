@@ -76,6 +76,8 @@ Para verificar em qual Domain Controller (DC) seu servidor está autenticando, v
 nltest /dsgetdc:yourdomain.com
 
 
+Acessar o modo de configuração de impressora antigo - tipo do windows 10 no windows 11
+shell:::{A8A91A66-3A7D-4424-8D24-04E180695C7A}
 
 
 
