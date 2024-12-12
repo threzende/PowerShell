@@ -1,1 +1,0 @@
-The tasks related to the build request for the creation of new servers from the Windows team have been completed. You can follow the rest of the process through the RITMs.
