@@ -1,0 +1,1 @@
+Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\State\Machine" | Select-Object -ExpandProperty "Distinguished-Name"
