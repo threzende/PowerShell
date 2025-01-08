@@ -1,23 +1,16 @@
 ### Script para listar discos, labels e programas instalados e salvar em HTML ###
 
 # Defina o caminho do arquivo HTML
-$outputFile = "C:\\Temp\\DiskInfo.html"
+$outputFile = "C:\Temp\DiskInfo.html"
 
 # Colete informações sobre os volumes
 $volumes = Get-Volume | Select-Object DriveLetter, FileSystemLabel, Size
 
-# Colete informações sobre os programas instalados via Registro
-$programs = @(
-    "Carbon Black",
-    "Nessus",
-    "SolarWinds",
-    "Trellix Endpoint"
-)
-
+# Colete informações sobre todos os programas instalados via Registro
 $installedPrograms = @()
 $uninstallKeys = @(
-    "HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall",
-    "HKLM:\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
+    "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall",
+    "HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"
 )
 
 foreach ($key in $uninstallKeys) {
@@ -26,7 +19,7 @@ foreach ($key in $uninstallKeys) {
         $displayVersion = $_.GetValue("DisplayVersion")
         $installDate = $_.GetValue("InstallDate")
 
-        if ($displayName -and ($programs -contains $displayName)) {
+        if ($displayName) {
             $installedPrograms += [PSCustomObject]@{
                 Name = $displayName
                 Version = $displayVersion
@@ -99,7 +92,7 @@ $html += @"
         <tbody>
 "@
 
-# Adicione informações sobre os programas instalados ao HTML
+# Adicione informações sobre todos os programas instalados ao HTML
 foreach ($program in $installedPrograms) {
     $html += "<tr>
                 <td>$($program.Name)</td>
