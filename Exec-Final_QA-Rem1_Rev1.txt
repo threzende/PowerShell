@@ -6,7 +6,7 @@ $outputFile = "C:\\Temp\\DiskInfo.html"
 # Colete informações sobre os volumes
 $volumes = Get-Volume | Select-Object DriveLetter, FileSystemLabel, Size
 
-# Colete informações sobre os programas instalados
+# Colete informações sobre os programas instalados via Registro
 $programs = @(
     "Carbon Black",
     "Nessus",
@@ -14,9 +14,31 @@ $programs = @(
     "Trellix Endpoint"
 )
 
-$installedPrograms = Get-WmiObject -Class Win32_Product | Where-Object {
-    $programs -contains $_.Name
-} | Select-Object Name, Version, InstallDate
+$installedPrograms = @()
+$uninstallKeys = @(
+    "HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall",
+    "HKLM:\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
+)
+
+foreach ($key in $uninstallKeys) {
+    Get-ChildItem -Path $key | ForEach-Object {
+        $displayName = $_.GetValue("DisplayName")
+        $displayVersion = $_.GetValue("DisplayVersion")
+        $installDate = $_.GetValue("InstallDate")
+
+        if ($displayName -and ($programs -contains $displayName)) {
+            $installedPrograms += [PSCustomObject]@{
+                Name = $displayName
+                Version = $displayVersion
+                InstallDate = if ($installDate) {
+                    [DateTime]::ParseExact($installDate, "yyyyMMdd", $null).ToShortDateString()
+                } else {
+                    "N/A"
+                }
+            }
+        }
+    }
+}
 
 # Início do HTML
 $html = @"
@@ -79,11 +101,10 @@ $html += @"
 
 # Adicione informações sobre os programas instalados ao HTML
 foreach ($program in $installedPrograms) {
-    $installDate = if ($program.InstallDate) { [DateTime]::ParseExact($program.InstallDate, "yyyyMMdd", $null).ToShortDateString() } else { "N/A" }
     $html += "<tr>
                 <td>$($program.Name)</td>
                 <td>$($program.Version)</td>
-                <td>$installDate</td>
+                <td>$($program.InstallDate)</td>
               </tr>"
 }
 
