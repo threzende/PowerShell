@@ -28,7 +28,7 @@ foreach ($key in $uninstallKeys) {
         $installDate = $_.GetValue("InstallDate")
 
         # Verifique se o nome do programa contém alguma das palavras-chave
-        if ($displayName -and ($programFilters | Where-Object { $displayName -like "*$_*" })) {
+        if ($displayName -and ($programFilters | ForEach-Object { $displayName -like "*$_*" })) {
             $installedPrograms += [PSCustomObject]@{
                 Name = $displayName
                 Version = $displayVersion
@@ -47,7 +47,8 @@ $networkInfo = Get-NetIPConfiguration | ForEach-Object {
     [PSCustomObject]@{
         IPv4Address = $_.IPv4Address.IPAddress
         SubnetMask = if ($_.IPv4Address.PrefixLength) {
-            ([IPAddress]((0xFFFFFFFF -lsh (32 - $_.IPv4Address.PrefixLength)) -shl 32)).ToString()
+            $prefix = $_.IPv4Address.PrefixLength
+            [IPAddress](([math]::Pow(2, 32) - [math]::Pow(2, (32 - $prefix))) -shl (32 - $prefix)).ToString()
         } else {
             "N/A"
         }
