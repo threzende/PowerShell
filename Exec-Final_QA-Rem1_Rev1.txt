@@ -101,13 +101,24 @@ $html = @"
             <tr>
                 <th>Server Name</th>
                 <th>OS Version</th>
-                <th>Organizational Unit (OU)</th>
             </tr>
         </thead>
         <tbody>
             <tr>
                 <td>$computerName</td>
                 <td>$osVersion</td>
+            </tr>
+        </tbody>
+    </table>
+    <h1>Organizational Unit (OU)</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>OU</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
                 <td>$ou</td>
             </tr>
         </tbody>
