@@ -1,7 +1,12 @@
-### Script para listar discos, labels, programas instalados, IP, máscara de sub-rede e DNS, e salvar em HTML ###
+### Script para listar discos, labels, programas instalados, IP, máscara de sub-rede, DNS e versão do Windows, e salvar em HTML ###
 
 # Defina o caminho do arquivo HTML
 $outputFile = "C:\Temp\Final_QA.html"
+
+# Colete informações do sistema
+$computerName = $env:COMPUTERNAME
+$osInfo = Get-CimInstance -ClassName Win32_OperatingSystem
+$osVersion = "$($osInfo.Caption) $($osInfo.Version) $($osInfo.BuildNumber)"
 
 # Colete informações sobre os volumes
 $volumes = Get-Volume | Select-Object DriveLetter, FileSystemLabel, Size
@@ -82,6 +87,21 @@ $html = @"
     </style>
 </head>
 <body>
+    <h1>System Information</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Server Name</th>
+                <th>OS Version</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>$computerName</td>
+                <td>$osVersion</td>
+            </tr>
+        </tbody>
+    </table>
     <h1>Disk and Volume Information</h1>
     <table>
         <thead>
