@@ -4,7 +4,7 @@
 $outputFile = "C:\\Temp\\DiskInfo.html"
 
 # Colete informações sobre os volumes
-$volumes = Get-Volume | Select-Object DriveLetter, FileSystemLabel, FileSystem, Size, SizeRemaining
+$volumes = Get-Volume | Select-Object DriveLetter, FileSystemLabel, Size
 
 # Início do HTML
 $html = @"
@@ -34,9 +34,7 @@ $html = @"
             <tr>
                 <th>Drive Letter</th>
                 <th>Label</th>
-                <th>File System</th>
                 <th>Total Size (GB)</th>
-                <th>Free Space (GB)</th>
             </tr>
         </thead>
         <tbody>
@@ -45,13 +43,10 @@ $html = @"
 # Adicione informações sobre cada volume ao HTML
 foreach ($volume in $volumes) {
     $totalSizeGB = [math]::Round($volume.Size / 1GB, 2)
-    $freeSpaceGB = [math]::Round($volume.SizeRemaining / 1GB, 2)
     $html += "<tr>
                 <td>$($volume.DriveLetter)</td>
                 <td>$($volume.FileSystemLabel)</td>
-                <td>$($volume.FileSystem)</td>
                 <td>$totalSizeGB</td>
-                <td>$freeSpaceGB</td>
               </tr>"
 }
 
