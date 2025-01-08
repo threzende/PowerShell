@@ -1,0 +1,69 @@
+### Script para listar discos e labels e salvar em HTML ###
+
+# Defina o caminho do arquivo HTML
+$outputFile = "C:\\Temp\\DiskInfo.html"
+
+# Colete informações sobre os volumes
+$volumes = Get-Volume | Select-Object DriveLetter, FileSystemLabel, FileSystem, Size, SizeRemaining
+
+# Início do HTML
+$html = @"
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Disk Information</title>
+    <style>
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        th, td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <h1>Disk and Volume Information</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Drive Letter</th>
+                <th>Label</th>
+                <th>File System</th>
+                <th>Total Size (GB)</th>
+                <th>Free Space (GB)</th>
+            </tr>
+        </thead>
+        <tbody>
+"@
+
+# Adicione informações sobre cada volume ao HTML
+foreach ($volume in $volumes) {
+    $totalSizeGB = [math]::Round($volume.Size / 1GB, 2)
+    $freeSpaceGB = [math]::Round($volume.SizeRemaining / 1GB, 2)
+    $html += "<tr>
+                <td>$($volume.DriveLetter)</td>
+                <td>$($volume.FileSystemLabel)</td>
+                <td>$($volume.FileSystem)</td>
+                <td>$totalSizeGB</td>
+                <td>$freeSpaceGB</td>
+              </tr>"
+}
+
+# Finalize o HTML
+$html += @"
+        </tbody>
+    </table>
+</body>
+</html>
+"@
+
+# Salve o HTML no arquivo
+Set-Content -Path $outputFile -Value $html
+
+Write-Host "HTML file generated at $outputFile"
