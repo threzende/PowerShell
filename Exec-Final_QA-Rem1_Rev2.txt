@@ -1,5 +1,3 @@
-### Script para listar discos, labels, programas instalados, IP, máscara de sub-rede, DNS, versão do Windows, OU e tarefas agendadas de reboot, e salvar em HTML ###
-
 # Defina o caminho do arquivo HTML
 $outputFile = "C:\Temp\Final_QA.html"
 
@@ -74,41 +72,7 @@ $networkInfo = Get-NetIPConfiguration | ForEach-Object {
 }
 
 # Colete informações sobre tarefas agendadas relacionadas a "reboot"
-$rebootTasks = Get-ScheduledTask | Where-Object { $_.TaskName -like "*reboot*" } | ForEach-Object {
-    try {
-        $taskPath = if ($_.TaskPath -eq "\") { $_.TaskName } else { "$($_.TaskPath)$($_.TaskName)" }
-        $task = Get-ScheduledTask -TaskPath $_.TaskPath -TaskName $_.TaskName
-        $triggers = $task.Triggers
-
-        $daysOfWeek = @()
-        $formattedTimes = @()
-
-        foreach ($trigger in $triggers) {
-            if ($trigger.DaysOfWeek) {
-                $daysOfWeek += $trigger.DaysOfWeek
-            }
-            if ($trigger.StartBoundary) {
-                $startTime = [DateTime]::Parse($trigger.StartBoundary)
-                $formattedTimes += $startTime.ToString("HH:mm:ss", [System.Globalization.CultureInfo]::InvariantCulture)
-            }
-        }
-
-        $daysText = if ($daysOfWeek.Count -gt 0) { $daysOfWeek -join ", " } else { "N/A" }
-        $timeText = if ($formattedTimes.Count -gt 0) { $formattedTimes -join ", " } else { "N/A" }
-
-        [PSCustomObject]@{
-            TaskName = $_.TaskName
-            DaysOfWeek = $daysText
-            Time = $timeText
-        }
-    } catch {
-        [PSCustomObject]@{
-            TaskName = $_.TaskName
-            DaysOfWeek = "Error retrieving days"
-            Time = "Error retrieving times"
-        }
-    }
-}
+$tasks = Get-ScheduledTask | Where-Object { $_.TaskName -like "*reboot*" }
 
 # Início do HTML
 $html = @"
@@ -233,24 +197,58 @@ foreach ($net in $networkInfo) {
 $html += @"
         </tbody>
     </table>
-    <h1>Reboot Tasks</h1>
+    <h1>Scheduled Tasks Related to Reboot</h1>
     <table>
         <thead>
             <tr>
                 <th>Task Name</th>
-                <th>Days of Week</th>
-                <th>Execution Time</th>
+                <th>Days</th>
+                <th>Start Time</th>
             </tr>
         </thead>
         <tbody>
 "@
 
-# Adicione informações sobre tarefas de reboot ao HTML
-foreach ($task in $rebootTasks) {
+# Adicione informações sobre tarefas relacionadas a reboot
+if ($tasks.Count -gt 0) {
+    foreach ($task in $tasks) {
+        $triggers = $task.Triggers
+        $daysOfWeek = @()
+        $formattedTime = ""
+
+        foreach ($trigger in $triggers) {
+            if ($trigger.DaysOfWeek) {
+                $daysOfWeek = $trigger.DaysOfWeek | ForEach-Object {
+                    switch ($_){
+                        1 {"Sunday"}
+                        2 {"Monday"}
+                        4 {"Tuesday"}
+                        8 {"Wednesday"}
+                        16 {"Thursday"}
+                        32 {"Friday"}
+                        64 {"Saturday"}
+                    }
+                }
+            }
+
+            if ($trigger.StartBoundary) {
+                $startTime = Get-Date -Date $trigger.StartBoundary
+                $formattedTime = $startTime.ToString("hh:mm tt", [System.Globalization.CultureInfo]::InvariantCulture)
+            } else {
+                $formattedTime = "No start time defined"
+            }
+        }
+
+        $taskName = $task.TaskName
+        $html += "<tr>
+                    <td>$taskName</td>
+                    <td>$($daysOfWeek -join ", ")</td>
+                    <td>$formattedTime</td>
+                  </tr>"
+    }
+} else {
     $html += "<tr>
-                <td>$($task.TaskName)</td>
-                <td>$($task.DaysOfWeek)</td>
-                <td>$($task.Time)</td>
+                <td colspan='3'>No tasks found in Task Scheduler Library containing 'reboot'.</td>
               </tr>"
 }
 

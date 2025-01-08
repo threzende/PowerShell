@@ -1,0 +1,67 @@
+$tasks = Get-ScheduledTask | Where-Object { $_.TaskName -like "*reboot*" }
+$htmlContent = ""
+
+if ($tasks.Count -gt 0) {
+    $htmlContent += @"
+    <h2>Tasks in Task Scheduler Library:</h2>
+    <ul>
+"@
+
+    foreach ($task in $tasks) {
+        $triggers = $task.Triggers
+        $daysOfWeek = @()
+        $formattedTime = ""
+
+        foreach ($trigger in $triggers) {
+            if ($trigger.DaysOfWeek) {
+                $daysOfWeek = $trigger.DaysOfWeek
+            }
+
+            if ($trigger.StartBoundary) {
+                $startTime = Get-Date -Date $trigger.StartBoundary
+                $formattedTime = $startTime.ToString("hh:mm tt", [System.Globalization.CultureInfo]::InvariantCulture)
+            } else {
+                $formattedTime = "No start time defined"
+            }
+        }
+
+        if ($daysOfWeek.Count -gt 0) {
+            $daysOfWeek = $daysOfWeek | ForEach-Object {
+                switch ($_) {
+                    1 { "Sunday" }
+                    2 { "Monday" }
+                    4 { "Tuesday" }
+                    8 { "Wednesday" }
+                    16 { "Thursday" }
+                    32 { "Friday" }
+                    64 { "Saturday" }
+                }
+            }
+        } else {
+            $daysOfWeek = "No days defined"
+        }
+
+        $taskName = $task.TaskName
+        $htmlContent += @"
+        <li>
+            <p>$taskName</p>
+            <p>Day: $daysOfWeek</p>
+            <p>Hour: $formattedTime</p>
+        </li>
+"@
+    }
+
+    $htmlContent += @"
+    </ul>
+"@
+} else {
+    $htmlContent += @"
+    <p>No tasks found in Task Scheduler Library containing 'reboot'.</p>
+"@
+}
+
+# Save the HTML content to a file
+$htmlFilePath = "C:\temp\tasks.html"
+$htmlContent | Out-File -FilePath $htmlFilePath -Encoding UTF8
+
+Write-Output "HTML file created at $htmlFilePath"
