@@ -78,15 +78,15 @@ $rebootTasks = Get-ScheduledTask | Where-Object { $_.TaskName -like "*reboot*" }
     try {
         $taskPath = if ($_.TaskPath -eq "\") { $_.TaskName } else { "$($_.TaskPath)$($_.TaskName)" }
         $taskInfo = schtasks.exe /Query /TN $taskPath /XML 2>$null | Out-String
-        $triggerInfo = if ($taskInfo -match "<Trigger>(.*?)</Trigger>") { $Matches[1] } else { "No Trigger Found" }
+        $nextRunTime = if ($taskInfo -match "<NextRunTime>(.*?)</NextRunTime>") { $Matches[1] } else { "No Next Run Time Found" }
         [PSCustomObject]@{
             TaskName = $_.TaskName
-            Trigger = $triggerInfo
+            NextRunTime = $nextRunTime
         }
     } catch {
         [PSCustomObject]@{
             TaskName = $_.TaskName
-            Trigger = "Error retrieving trigger"
+            NextRunTime = "Error retrieving next run time"
         }
     }
 }
@@ -219,7 +219,7 @@ $html += @"
         <thead>
             <tr>
                 <th>Task Name</th>
-                <th>Trigger</th>
+                <th>Next Run Time</th>
             </tr>
         </thead>
         <tbody>
@@ -229,7 +229,7 @@ $html += @"
 foreach ($task in $rebootTasks) {
     $html += "<tr>
                 <td>$($task.TaskName)</td>
-                <td>$($task.Trigger)</td>
+                <td>$($task.NextRunTime)</td>
               </tr>"
 }
 
