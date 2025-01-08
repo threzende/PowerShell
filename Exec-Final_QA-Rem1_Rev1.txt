@@ -46,8 +46,16 @@ foreach ($key in $uninstallKeys) {
 $networkInfo = Get-NetIPConfiguration | ForEach-Object {
     [PSCustomObject]@{
         IPv4Address = $_.IPv4Address.IPAddress
-        SubnetMask = $_.IPv4Address.PrefixLength -ne $null ? ([IPNetwork]::Parse($_.IPv4Address.IPAddress + '/' + $_.IPv4Address.PrefixLength)).Netmask.ToString() : "N/A"
-        DNSServers = $_.DNSServer.ServerAddresses -join ", "
+        SubnetMask = if ($_.IPv4Address.PrefixLength) {
+            ([IPAddress]((0xFFFFFFFF -lsh (32 - $_.IPv4Address.PrefixLength)) -shl 32)).ToString()
+        } else {
+            "N/A"
+        }
+        DNSServers = if ($_.DNSServer.ServerAddresses) {
+            $_.DNSServer.ServerAddresses -join ", "
+        } else {
+            "N/A"
+        }
     }
 }
 
