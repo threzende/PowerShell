@@ -1,4 +1,4 @@
-### Script para listar discos, labels, programas instalados, IP, máscara de sub-rede, DNS, versão do Windows e OU, e salvar em HTML ###
+### Script para listar discos, labels, programas instalados, IP, máscara de sub-rede, DNS, versão do Windows, OU e tarefas agendadas de reboot, e salvar em HTML ###
 
 # Defina o caminho do arquivo HTML
 $outputFile = "C:\Temp\Final_QA.html"
@@ -70,6 +70,14 @@ $networkInfo = Get-NetIPConfiguration | ForEach-Object {
         } else {
             "N/A"
         }
+    }
+}
+
+# Colete informações sobre tarefas agendadas relacionadas a "reboot"
+$rebootTasks = Get-ScheduledTask | Where-Object { $_.TaskName -like "*reboot*" } | ForEach-Object {
+    [PSCustomObject]@{
+        TaskName = $_.TaskName
+        Trigger = (Get-ScheduledTaskTrigger -TaskName $_.TaskName).ToString() -join ", "
     }
 }
 
@@ -190,6 +198,28 @@ foreach ($net in $networkInfo) {
                 <td>$($net.IPv4Address)</td>
                 <td>$($net.SubnetMask)</td>
                 <td>$($net.DNSServers)</td>
+              </tr>"
+}
+
+$html += @"
+        </tbody>
+    </table>
+    <h1>Reboot Tasks</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Task Name</th>
+                <th>Trigger</th>
+            </tr>
+        </thead>
+        <tbody>
+"@
+
+# Adicione informações sobre tarefas de reboot ao HTML
+foreach ($task in $rebootTasks) {
+    $html += "<tr>
+                <td>$($task.TaskName)</td>
+                <td>$($task.Trigger)</td>
               </tr>"
 }
 
