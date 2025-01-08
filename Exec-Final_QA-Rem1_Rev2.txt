@@ -1,0 +1,238 @@
+### Script para listar discos, labels, programas instalados, IP, máscara de sub-rede, DNS, versão do Windows, OU e tarefas agendadas de reboot, e salvar em HTML ###
+
+# Defina o caminho do arquivo HTML
+$outputFile = "C:\Temp\Final_QA.html"
+
+# Colete informações do sistema
+$computerName = $env:COMPUTERNAME
+$osInfo = Get-CimInstance -ClassName Win32_OperatingSystem
+$osVersion = "$($osInfo.Caption) $($osInfo.Version) $($osInfo.BuildNumber)"
+
+# Colete a OU do servidor
+$registryPath = "HKLM:\Software\Microsoft\Windows\CurrentVersion\Group Policy\State\Machine"  # Caminho onde a OU geralmente é encontrada
+$ou = if (Test-Path $registryPath) {
+    Get-ItemProperty -Path $registryPath | Select-Object -ExpandProperty Distinguished-Name
+} else {
+    "N/A"
+}
+
+# Colete informações sobre os volumes
+$volumes = Get-Volume | Select-Object DriveLetter, FileSystemLabel, Size
+
+# Colete informações sobre programas específicos instalados via Registro
+$programFilters = @(
+    "Carbon Black",
+    "Nessus",
+    "NetWorker",
+    "SolarWinds",
+    "Trellix Endpoint Security"
+)
+
+$installedPrograms = @()
+$uninstallKeys = @(
+    "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall",
+    "HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"
+)
+
+foreach ($key in $uninstallKeys) {
+    Get-ChildItem -Path $key | ForEach-Object {
+        $displayName = $_.GetValue("DisplayName")
+        $displayVersion = $_.GetValue("DisplayVersion")
+        $installDate = $_.GetValue("InstallDate")
+
+        # Verifique se o nome do programa contém alguma das palavras-chave
+        if ($displayName -and ($programFilters | Where-Object { $displayName -like "*$_*" })) {
+            $installedPrograms += [PSCustomObject]@{
+                Name = $displayName
+                Version = $displayVersion
+                InstallDate = if ($installDate) {
+                    [DateTime]::ParseExact($installDate, "yyyyMMdd", $null).ToShortDateString()
+                } else {
+                    "N/A"
+                }
+            }
+        }
+    }
+}
+
+# Colete informações de rede
+$networkInfo = Get-NetIPConfiguration | ForEach-Object {
+    [PSCustomObject]@{
+        IPv4Address = $_.IPv4Address.IPAddress
+        SubnetMask = if ($_.IPv4Address.PrefixLength) {
+            $prefix = $_.IPv4Address.PrefixLength
+            ([IPAddress](([math]::Pow(2, 32) - [math]::Pow(2, (32 - $prefix))) -as [long])).ToString()
+        } else {
+            "N/A"
+        }
+        DNSServers = if ($_.DNSServer.ServerAddresses) {
+            $_.DNSServer.ServerAddresses -join ", "
+        } else {
+            "N/A"
+        }
+    }
+}
+
+# Colete informações sobre tarefas agendadas relacionadas a "reboot"
+$rebootTasks = Get-ScheduledTask | Where-Object { $_.TaskName -like "*reboot*" } | ForEach-Object {
+    $triggers = Get-ScheduledTaskTrigger -TaskPath $_.TaskPath -TaskName $_.TaskName
+    [PSCustomObject]@{
+        TaskName = $_.TaskName
+        Trigger = $triggers | ForEach-Object { $_.TriggerType } -join ", "
+    }
+}
+
+# Início do HTML
+$html = @"
+<!DOCTYPE html>
+<html>
+<head>
+    <title>System Information</title>
+    <style>
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        th, td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <h1>System Information</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Server Name</th>
+                <th>OS Version</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>$computerName</td>
+                <td>$osVersion</td>
+            </tr>
+        </tbody>
+    </table>
+    <h1>Organizational Unit (OU)</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>OU</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>$ou</td>
+            </tr>
+        </tbody>
+    </table>
+    <h1>Disk and Volume Information</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Drive Letter</th>
+                <th>Label</th>
+                <th>Total Size (GB)</th>
+            </tr>
+        </thead>
+        <tbody>
+"@
+
+# Adicione informações sobre cada volume ao HTML
+foreach ($volume in $volumes) {
+    $totalSizeGB = [math]::Round($volume.Size / 1GB, 2)
+    $html += "<tr>
+                <td>$($volume.DriveLetter)</td>
+                <td>$($volume.FileSystemLabel)</td>
+                <td>$totalSizeGB</td>
+              </tr>"
+}
+
+$html += @"
+        </tbody>
+    </table>
+    <h1>Installed Programs</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Program Name</th>
+                <th>Version</th>
+                <th>Install Date</th>
+            </tr>
+        </thead>
+        <tbody>
+"@
+
+# Adicione informações sobre programas específicos ao HTML
+foreach ($program in $installedPrograms) {
+    $html += "<tr>
+                <td>$($program.Name)</td>
+                <td>$($program.Version)</td>
+                <td>$($program.InstallDate)</td>
+              </tr>"
+}
+
+$html += @"
+        </tbody>
+    </table>
+    <h1>Network Information</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>IP Address</th>
+                <th>Subnet Mask</th>
+                <th>DNS Servers</th>
+            </tr>
+        </thead>
+        <tbody>
+"@
+
+# Adicione informações de rede ao HTML
+foreach ($net in $networkInfo) {
+    $html += "<tr>
+                <td>$($net.IPv4Address)</td>
+                <td>$($net.SubnetMask)</td>
+                <td>$($net.DNSServers)</td>
+              </tr>"
+}
+
+$html += @"
+        </tbody>
+    </table>
+    <h1>Reboot Tasks</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Task Name</th>
+                <th>Trigger</th>
+            </tr>
+        </thead>
+        <tbody>
+"@
+
+# Adicione informações sobre tarefas de reboot ao HTML
+foreach ($task in $rebootTasks) {
+    $html += "<tr>
+                <td>$($task.TaskName)</td>
+                <td>$($task.Trigger)</td>
+              </tr>"
+}
+
+# Finalize o HTML
+$html += @"
+        </tbody>
+    </table>
+</body>
+</html>
+"@
+
+# Salve o HTML no arquivo
+Set-Content -Path $outputFile -Value $html
+
+Write-Host "HTML file generated at $outputFile"
