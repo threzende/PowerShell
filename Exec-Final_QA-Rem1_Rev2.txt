@@ -77,16 +77,35 @@ $networkInfo = Get-NetIPConfiguration | ForEach-Object {
 $rebootTasks = Get-ScheduledTask | Where-Object { $_.TaskName -like "*reboot*" } | ForEach-Object {
     try {
         $taskPath = if ($_.TaskPath -eq "\") { $_.TaskName } else { "$($_.TaskPath)$($_.TaskName)" }
-        $taskInfo = schtasks.exe /Query /TN $taskPath /XML 2>$null | Out-String
-        $nextRunTime = if ($taskInfo -match "<NextRunTime>(.*?)</NextRunTime>") { $Matches[1] } else { "No Next Run Time Found" }
+        $task = Get-ScheduledTask -TaskPath $_.TaskPath -TaskName $_.TaskName
+        $triggers = $task.Triggers
+
+        $daysOfWeek = @()
+        $formattedTimes = @()
+
+        foreach ($trigger in $triggers) {
+            if ($trigger.DaysOfWeek) {
+                $daysOfWeek += $trigger.DaysOfWeek
+            }
+            if ($trigger.StartBoundary) {
+                $startTime = [DateTime]::Parse($trigger.StartBoundary)
+                $formattedTimes += $startTime.ToString("HH:mm:ss", [System.Globalization.CultureInfo]::InvariantCulture)
+            }
+        }
+
+        $daysText = if ($daysOfWeek.Count -gt 0) { $daysOfWeek -join ", " } else { "N/A" }
+        $timeText = if ($formattedTimes.Count -gt 0) { $formattedTimes -join ", " } else { "N/A" }
+
         [PSCustomObject]@{
             TaskName = $_.TaskName
-            NextRunTime = $nextRunTime
+            DaysOfWeek = $daysText
+            Time = $timeText
         }
     } catch {
         [PSCustomObject]@{
             TaskName = $_.TaskName
-            NextRunTime = "Error retrieving next run time"
+            DaysOfWeek = "Error retrieving days"
+            Time = "Error retrieving times"
         }
     }
 }
@@ -219,7 +238,8 @@ $html += @"
         <thead>
             <tr>
                 <th>Task Name</th>
-                <th>Next Run Time</th>
+                <th>Days of Week</th>
+                <th>Execution Time</th>
             </tr>
         </thead>
         <tbody>
@@ -229,7 +249,8 @@ $html += @"
 foreach ($task in $rebootTasks) {
     $html += "<tr>
                 <td>$($task.TaskName)</td>
-                <td>$($task.NextRunTime)</td>
+                <td>$($task.DaysOfWeek)</td>
+                <td>$($task.Time)</td>
               </tr>"
 }
 
