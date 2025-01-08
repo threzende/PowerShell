@@ -75,10 +75,11 @@ $networkInfo = Get-NetIPConfiguration | ForEach-Object {
 
 # Colete informações sobre tarefas agendadas relacionadas a "reboot"
 $rebootTasks = Get-ScheduledTask | Where-Object { $_.TaskName -like "*reboot*" } | ForEach-Object {
-    $triggers = Get-ScheduledTaskTrigger -TaskPath $_.TaskPath -TaskName $_.TaskName
+    $taskInfo = schtasks.exe /Query /TN $_.TaskName /XML | Out-String
+    $triggerInfo = if ($taskInfo -match "<Trigger>(.*?)</Trigger>") { $Matches[1] } else { "No Trigger Found" }
     [PSCustomObject]@{
         TaskName = $_.TaskName
-        Trigger = $triggers | ForEach-Object { $_.TriggerType } -join ", "
+        Trigger = $triggerInfo
     }
 }
 
