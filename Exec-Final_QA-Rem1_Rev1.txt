@@ -1,4 +1,4 @@
-### Script para listar discos e labels e salvar em HTML ###
+### Script para listar discos, labels e programas instalados e salvar em HTML ###
 
 # Defina o caminho do arquivo HTML
 $outputFile = "C:\\Temp\\DiskInfo.html"
@@ -6,12 +6,24 @@ $outputFile = "C:\\Temp\\DiskInfo.html"
 # Colete informações sobre os volumes
 $volumes = Get-Volume | Select-Object DriveLetter, FileSystemLabel, Size
 
+# Colete informações sobre os programas instalados
+$programs = @(
+    "Carbon Black",
+    "Nessus",
+    "SolarWinds",
+    "Trellix Endpoint"
+)
+
+$installedPrograms = Get-WmiObject -Class Win32_Product | Where-Object {
+    $programs -contains $_.Name
+} | Select-Object Name, Version, InstallDate
+
 # Início do HTML
 $html = @"
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Disk Information</title>
+    <title>Disk and Program Information</title>
     <style>
         table {
             border-collapse: collapse;
@@ -47,6 +59,31 @@ foreach ($volume in $volumes) {
                 <td>$($volume.DriveLetter)</td>
                 <td>$($volume.FileSystemLabel)</td>
                 <td>$totalSizeGB</td>
+              </tr>"
+}
+
+$html += @"
+        </tbody>
+    </table>
+    <h1>Installed Programs</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Program Name</th>
+                <th>Version</th>
+                <th>Install Date</th>
+            </tr>
+        </thead>
+        <tbody>
+"@
+
+# Adicione informações sobre os programas instalados ao HTML
+foreach ($program in $installedPrograms) {
+    $installDate = if ($program.InstallDate) { [DateTime]::ParseExact($program.InstallDate, "yyyyMMdd", $null).ToShortDateString() } else { "N/A" }
+    $html += "<tr>
+                <td>$($program.Name)</td>
+                <td>$($program.Version)</td>
+                <td>$installDate</td>
               </tr>"
 }
 
