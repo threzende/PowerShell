@@ -43,7 +43,13 @@ foreach ($key in $uninstallKeys) {
 }
 
 # Colete informações de rede
-$networkInfo = Get-NetIPConfiguration | Select-Object IPv4Address, IPv4SubnetMask, DNSServer
+$networkInfo = Get-NetIPConfiguration | ForEach-Object {
+    [PSCustomObject]@{
+        IPv4Address = $_.IPv4Address.IPAddress
+        SubnetMask = $_.IPv4Address.PrefixLength -ne $null ? ([IPNetwork]::Parse($_.IPv4Address.IPAddress + '/' + $_.IPv4Address.PrefixLength)).Netmask.ToString() : "N/A"
+        DNSServers = $_.DNSServer.ServerAddresses -join ", "
+    }
+}
 
 # Início do HTML
 $html = @"
@@ -130,11 +136,10 @@ $html += @"
 
 # Adicione informações de rede ao HTML
 foreach ($net in $networkInfo) {
-    $dnsServers = $net.DNSServer -join ", "
     $html += "<tr>
-                <td>$($net.IPv4Address.IPAddress)</td>
-                <td>$($net.IPv4SubnetMask)</td>
-                <td>$dnsServers</td>
+                <td>$($net.IPv4Address)</td>
+                <td>$($net.SubnetMask)</td>
+                <td>$($net.DNSServers)</td>
               </tr>"
 }
 
