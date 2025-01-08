@@ -6,7 +6,15 @@ $outputFile = "C:\Temp\DiskInfo.html"
 # Colete informações sobre os volumes
 $volumes = Get-Volume | Select-Object DriveLetter, FileSystemLabel, Size
 
-# Colete informações sobre todos os programas instalados via Registro
+# Colete informações sobre programas específicos instalados via Registro
+$programFilters = @(
+    "Carbon Black",
+    "Nessus",
+    "NetWorker",
+    "SolarWinds",
+    "Trellix Endpoint Security"
+)
+
 $installedPrograms = @()
 $uninstallKeys = @(
     "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall",
@@ -19,7 +27,8 @@ foreach ($key in $uninstallKeys) {
         $displayVersion = $_.GetValue("DisplayVersion")
         $installDate = $_.GetValue("InstallDate")
 
-        if ($displayName) {
+        # Verifique se o nome do programa contém alguma das palavras-chave
+        if ($displayName -and ($programFilters | Where-Object { $displayName -like "*$_*" })) {
             $installedPrograms += [PSCustomObject]@{
                 Name = $displayName
                 Version = $displayVersion
@@ -92,7 +101,7 @@ $html += @"
         <tbody>
 "@
 
-# Adicione informações sobre todos os programas instalados ao HTML
+# Adicione informações sobre programas específicos ao HTML
 foreach ($program in $installedPrograms) {
     $html += "<tr>
                 <td>$($program.Name)</td>
