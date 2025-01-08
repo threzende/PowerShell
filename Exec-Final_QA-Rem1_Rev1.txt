@@ -1,7 +1,7 @@
-### Script para listar discos, labels e programas instalados e salvar em HTML ###
+### Script para listar discos, labels, programas instalados, IP, máscara de sub-rede e DNS, e salvar em HTML ###
 
 # Defina o caminho do arquivo HTML
-$outputFile = "C:\Temp\DiskInfo.html"
+$outputFile = "C:\Temp\Final_QA.html"
 
 # Colete informações sobre os volumes
 $volumes = Get-Volume | Select-Object DriveLetter, FileSystemLabel, Size
@@ -42,12 +42,15 @@ foreach ($key in $uninstallKeys) {
     }
 }
 
+# Colete informações de rede
+$networkInfo = Get-NetIPConfiguration | Select-Object IPv4Address, IPv4SubnetMask, DNSServer
+
 # Início do HTML
 $html = @"
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Disk and Program Information</title>
+    <title>System Information</title>
     <style>
         table {
             border-collapse: collapse;
@@ -107,6 +110,31 @@ foreach ($program in $installedPrograms) {
                 <td>$($program.Name)</td>
                 <td>$($program.Version)</td>
                 <td>$($program.InstallDate)</td>
+              </tr>"
+}
+
+$html += @"
+        </tbody>
+    </table>
+    <h1>Network Information</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>IP Address</th>
+                <th>Subnet Mask</th>
+                <th>DNS Servers</th>
+            </tr>
+        </thead>
+        <tbody>
+"@
+
+# Adicione informações de rede ao HTML
+foreach ($net in $networkInfo) {
+    $dnsServers = $net.DNSServer -join ", "
+    $html += "<tr>
+                <td>$($net.IPv4Address.IPAddress)</td>
+                <td>$($net.IPv4SubnetMask)</td>
+                <td>$dnsServers</td>
               </tr>"
 }
 
