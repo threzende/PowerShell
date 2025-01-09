@@ -106,14 +106,12 @@ $html = @"
             <tr>
                 <th>Server Name</th>
                 <th>OS Version</th>
-                <th>SCCM Installed</th>
             </tr>
         </thead>
         <tbody>
             <tr>
                 <td>$computerName</td>
                 <td>$osVersion</td>
-                <td>$sccmInstalled</td>
             </tr>
         </tbody>
     </table>
@@ -177,6 +175,19 @@ foreach ($program in $installedPrograms) {
 }
 
 $html += @"
+        </tbody>
+    </table>
+    <h1>SCCM Installation Status</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>SCCM Installed</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>$sccmInstalled</td>
+            </tr>
         </tbody>
     </table>
     <h1>Network Information</h1>
