@@ -1,0 +1,138 @@
+$computerName = $env:COMPUTERNAME
+
+# Caminho local onde o arquivo será criado
+$outputFile = "C:\Temp\QA_$computerName.html"
+
+# Caminho remoto para onde o arquivo será copiado
+$remoteFolder = "\\servDev\z$"
+$remoteFile = Join-Path -Path $remoteFolder -ChildPath "QA_$computerName.html"
+
+# Coletar informações do sistema
+$osInfo = Get-CimInstance -ClassName Win32_OperatingSystem
+$osVersion = "$($osInfo.Caption) $($osInfo.Version) $($osInfo.BuildNumber)"
+$sccmShortcutPath = "C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Microsoft Configuration Manager\Configuration Manager\Software Center.lnk"
+$sccmInstalled = if (Test-Path $sccmShortcutPath) { "Yes" } else { "No" }
+$registryPath = "HKLM:\Software\Microsoft\Windows\CurrentVersion\Group Policy\State\Machine"
+$ou = if (Test-Path $registryPath) {
+    Get-ItemProperty -Path $registryPath | Select-Object -ExpandProperty Distinguished-Name
+} else {
+    "N/A"
+}
+
+$volumes = Get-Volume | Where-Object { $_.DriveLetter -ne $null } | Select-Object DriveLetter, FileSystemLabel, Size
+
+$programFilters = @(
+    "Carbon Black",
+    "Nessus",
+    "NetWorker",
+    "SolarWinds",
+    "Trellix Endpoint Security",
+    "Fireeye"
+)
+
+$installedPrograms = @()
+$uninstallKeys = @(
+    "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall",
+    "HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"
+)
+
+foreach ($key in $uninstallKeys) {
+    Get-ChildItem -Path $key | ForEach-Object {
+        $displayName = $_.GetValue("DisplayName")
+        $displayVersion = $_.GetValue("DisplayVersion")
+        $installDate = $_.GetValue("InstallDate")
+        if ($displayName -and ($programFilters | Where-Object { $displayName -like "*$_*" })) {
+            $installedPrograms += [PSCustomObject]@{
+                Name = $displayName
+                Version = $displayVersion
+                InstallDate = if ($installDate) {
+                    [DateTime]::ParseExact($installDate, "yyyyMMdd", $null).ToShortDateString()
+                } else {
+                    "N/A"
+                }
+            }
+        }
+    }
+}
+
+$networkInfo = Get-NetIPConfiguration | ForEach-Object {
+    [PSCustomObject]@{
+        IPv4Address = $_.IPv4Address.IPAddress
+        SubnetMask = if ($_.IPv4Address.PrefixLength) {
+            $prefix = $_.IPv4Address.PrefixLength
+            ([IPAddress](([math]::Pow(2, 32) - [math]::Pow(2, (32 - $prefix))) -as [long])).ToString()
+        } else {
+            "N/A"
+        }
+        DNSServers = if ($_.DNSServer.ServerAddresses) {
+            $_.DNSServer.ServerAddresses -join " | "
+        } else {
+            "N/A"
+        }
+    }
+}
+
+$tasks = Get-ScheduledTask | Where-Object { $_.TaskName -like "*reboot*" }
+
+$html = @"
+<!DOCTYPE html>
+<html>
+<head>
+    <title>System Information</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            line-height: 1.2;
+        }
+        h1 {
+            font-size: 16px;
+            color: #0056b3;
+            margin-bottom: 8px;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 15px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 6px;
+            text-align: left;
+            font-size: 12px;
+        }
+        th {
+            background-color: #f4f4f4;
+            font-weight: bold;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+    </style>
+</head>
+<body>
+    <h1>System Information</h1>
+    <table>
+        <tr><th>Server Name</th><td>$computerName</td></tr>
+        <tr><th>OS Version</th><td>$osVersion</td></tr>
+        <tr><th>SCCM Installed</th><td>$sccmInstalled</td></tr>
+    </table>
+</body>
+</html>
+"@
+
+Set-Content -Path $outputFile -Value $html
+Write-Host "HTML file generated locally at $outputFile"
+
+# Copiar o arquivo para o servidor remoto
+try {
+    Copy-Item -Path $outputFile -Destination $remoteFile -Force
+    Write-Host "File successfully copied to $remoteFile"
+} catch {
+    Write-Host "Failed to copy file to $remoteFile. Error: $_"
+}
