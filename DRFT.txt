@@ -1,0 +1,1 @@
+Get-WmiObject -Namespace "root\ccm\clientsdk" -Class "CCM_Client" | Select-Object -Property ClientActiveStatus
