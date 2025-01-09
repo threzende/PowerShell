@@ -1,5 +1,5 @@
 # Defina o caminho do arquivo HTML
-$outputFile = "C:\Temp\Final_QA.html"
+$outputFile = "C:\Temp\QA_$computerName.html"
 
 # Colete informações do sistema
 $computerName = $env:COMPUTERNAME
