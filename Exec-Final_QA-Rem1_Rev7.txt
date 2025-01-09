@@ -1,8 +1,9 @@
+$computerName = $env:COMPUTERNAME
+
 # Defina o caminho do arquivo HTML
 $outputFile = "C:\Temp\QA_$computerName.html"
 
 # Colete informações do sistema
-$computerName = $env:COMPUTERNAME
 $osInfo = Get-CimInstance -ClassName Win32_OperatingSystem
 $osVersion = "$($osInfo.Caption) $($osInfo.Version) $($osInfo.BuildNumber)"
 
