@@ -29,6 +29,7 @@ $programFilters = @(
     "NetWorker",
     "SolarWinds",
     "Trellix Endpoint Security"
+    "Fireeye"
 )
 
 $installedPrograms = @()
