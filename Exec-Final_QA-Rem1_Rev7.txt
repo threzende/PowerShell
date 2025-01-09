@@ -19,7 +19,7 @@ $ou = if (Test-Path $registryPath) {
 }
 
 # Colete informações sobre os volumes
-$volumes = Get-Volume | Select-Object DriveLetter, FileSystemLabel, Size
+$volumes = Get-Volume | Where-Object { $_.DriveLetter -ne $null } | Select-Object DriveLetter, FileSystemLabel, Size
 
 # Colete informações sobre programas específicos instalados via Registro
 $programFilters = @(
@@ -68,7 +68,7 @@ $networkInfo = Get-NetIPConfiguration | ForEach-Object {
             "N/A"
         }
         DNSServers = if ($_.DNSServer.ServerAddresses) {
-            $_.DNSServer.ServerAddresses -join ", "
+            $_.DNSServer.ServerAddresses -join " | "
         } else {
             "N/A"
         }
