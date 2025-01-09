@@ -10,5 +10,5 @@ if (-not (Test-Path -Path $localFolder)) {
 $outputFile = Join-Path -Path $localFolder -ChildPath "QA_$computerName.html"
 
 # Caminho remoto para onde o arquivo será copiado
-$remoteFolder = "\\servDev\z$\fqa_log"
+$remoteFolder = "\\servDev\z$"
 $remoteFile = Join-Path -Path $remoteFolder -ChildPath "QA_$computerName.html"
