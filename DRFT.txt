@@ -1,0 +1,11 @@
+$computerName = $env:COMPUTERNAME
+
+# Define o caminho remoto para salvar o HTML
+$remoteFolder = "\\servDev\z$\fqa_log"
+$remoteFile = Join-Path -Path $remoteFolder -ChildPath "QA_$computerName.html"
+
+# Verificar se o diretório remoto existe; se não, cria
+if (-not (Test-Path -Path $remoteFolder)) {
+    New-Item -ItemType Directory -Path $remoteFolder -Force
+    Write-Host "Remote directory created at $remoteFolder"
+}
