@@ -1,4 +1,4 @@
-$user = "A4948943"
+$user = "user"
 $logFile = "C:\Temp\LogonEvents.log"
 
 if (Test-Path $logFile) {
