@@ -1,16 +1,32 @@
 $user = "A4948943"
+$logFile = "C:\Temp\LogonEvents.log"  # Caminho do arquivo de saída
 
+# Cria ou limpa o arquivo de log
+if (Test-Path $logFile) {
+    Remove-Item $logFile
+}
+New-Item -Path $logFile -ItemType File | Out-Null
+
+# Busca os eventos no log de segurança
 Get-EventLog -LogName Security -Newest 1000 | Where-Object {
-    ($_.EventID -eq 4624 -or $_.EventID -eq 4625) -and
+    ($_.EventID -in 4624, 4625, 4776, 4768, 4769) -and
     $_.Message -match $user
 } | ForEach-Object {
     $eventDetails = $_.Message
     $workstation = ($eventDetails -split "Workstation Name:\s+")[1] -split "`r`n"
     $sourceAddress = ($eventDetails -split "Source Network Address:\s+")[1] -split "`r`n"
 
-    Write-Output "Usuário: $user"
-    Write-Output "Máquina Cliente: $workstation"
-    Write-Output "Endereço de Rede: $sourceAddress"
-    Write-Output "Horário: $($_.TimeGenerated)"
-    Write-Output "-----------------------------------"
+    # Monta as informações para salvar no log
+    $logEntry = @"
+Usuário: $user
+Máquina Cliente: $workstation
+Endereço de Rede: $sourceAddress
+Horário: $($_.TimeGenerated)
+-----------------------------------
+"@
+
+    # Salva no arquivo
+    $logEntry | Out-File -FilePath $logFile -Append -Encoding UTF8
 }
+
+Write-Output "Resultados salvos em: $logFile"
