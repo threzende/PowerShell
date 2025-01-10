@@ -1,0 +1,16 @@
+$user = "A4948943"
+
+Get-EventLog -LogName Security -Newest 1000 | Where-Object {
+    ($_.EventID -eq 4624 -or $_.EventID -eq 4625) -and
+    $_.Message -match $user
+} | ForEach-Object {
+    $eventDetails = $_.Message
+    $workstation = ($eventDetails -split "Workstation Name:\s+")[1] -split "`r`n"
+    $sourceAddress = ($eventDetails -split "Source Network Address:\s+")[1] -split "`r`n"
+
+    Write-Output "Usuário: $user"
+    Write-Output "Máquina Cliente: $workstation"
+    Write-Output "Endereço de Rede: $sourceAddress"
+    Write-Output "Horário: $($_.TimeGenerated)"
+    Write-Output "-----------------------------------"
+}
