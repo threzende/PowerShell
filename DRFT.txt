@@ -1,14 +1,7 @@
-$computerName = $env:COMPUTERNAME
+Get-WinEvent -LogName Security | Where-Object { $_.Id -eq 4624 } | Select-Object TimeCreated, Message | Format-List
 
-# Caminho local onde o arquivo será criado
-$localFolder = "C:\Temp\fqa_log"
-if (-not (Test-Path -Path $localFolder)) {
-    New-Item -ItemType Directory -Path $localFolder -Force
-    Write-Host "Local directory created at $localFolder"
-}
 
-$outputFile = Join-Path -Path $localFolder -ChildPath "QA_$computerName.html"
+Get-WinEvent -LogName Security | Where-Object { $_.Id -eq 4624 -and $_.Message -match "NomeDeUsuario" } | Select-Object TimeCreated, Message | Format-List
 
-# Caminho remoto para onde o arquivo será copiado
-$remoteFolder = "\\servDev\z$"
-$remoteFile = Join-Path -Path $remoteFolder -ChildPath "QA_$computerName.html"
+
+Get-WinEvent -LogName Security | Where-Object { $_.Id -eq 4624 -and $_.Message -match "Logon Type:\s+10" } | Select-Object TimeCreated, Message | Format-List
