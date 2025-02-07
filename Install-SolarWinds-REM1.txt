@@ -1,4 +1,4 @@
-$InstallerPath = "C:\Temp\SolarWinds-Agent-2024.4.0.N.msi"
-$TransformPath = "C:\Temp\SolarWinds-Agent-2024.4.0.N.mst"
+$InstallerPath = "C:\Temp\SOW\sow.msi"
+$TransformPath = "C:\Temp\SOW\sow.mst"
 
 Start-Process -FilePath "msiexec.exe" -ArgumentList "/I `"$InstallerPath`" /qn TRANSFORMS=`"$TransformPath`"" -Wait -NoNewWindow
