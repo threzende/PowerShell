@@ -5,3 +5,6 @@ Get-WinEvent -LogName Security | Where-Object { $_.Id -eq 4624 -and $_.Message -
 
 
 Get-WinEvent -LogName Security | Where-Object { $_.Id -eq 4624 -and $_.Message -match "Logon Type:\s+10" } | Select-Object TimeCreated, Message | Format-List
+
+
+Get-WinEvent -LogName Security | Where-Object { $_.Id -eq 4624 -and $_.Message -match "Logon Type:\s+10" -and $_.Message -notmatch "User:\s+NA" } | Select-Object TimeCreated, Message | Format-List
