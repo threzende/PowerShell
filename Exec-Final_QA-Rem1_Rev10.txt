@@ -1,25 +1,22 @@
 $computerName = $env:COMPUTERNAME
 
-# Caminho da pasta onde o arquivo será salvo
-$outputFolder = "C:\Temp\FQA"
+# Define o caminho do diretório de saída
+$outputDir = "C:\Temp\fqa"
 
-# Criar a pasta se não existir
-if (!(Test-Path -Path $outputFolder)) {
-    New-Item -Path $outputFolder -ItemType Directory -Force
+# Verifica se o diretório existe, senão cria
+if (!(Test-Path $outputDir)) {
+    New-Item -ItemType Directory -Path $outputDir -Force
 }
 
-# Definir o caminho do arquivo dentro da nova pasta
-$outputFile = "$outputFolder\QA_$computerName.html"
+# Define o caminho do arquivo de saída
+$outputFile = "$outputDir\QA_$computerName.html"
 
-# Caminho remoto para onde o arquivo será copiado
-$remoteFolder = "\\servDev\z$"
-$remoteFile = Join-Path -Path $remoteFolder -ChildPath "QA_$computerName.html"
-
-# Coletar informações do sistema
 $osInfo = Get-CimInstance -ClassName Win32_OperatingSystem
 $osVersion = "$($osInfo.Caption) $($osInfo.Version) $($osInfo.BuildNumber)"
+
 $sccmShortcutPath = "C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Microsoft Configuration Manager\Configuration Manager\Software Center.lnk"
 $sccmInstalled = if (Test-Path $sccmShortcutPath) { "Yes" } else { "No" }
+
 $registryPath = "HKLM:\Software\Microsoft\Windows\CurrentVersion\Group Policy\State\Machine"
 $ou = if (Test-Path $registryPath) {
     Get-ItemProperty -Path $registryPath | Select-Object -ExpandProperty Distinguished-Name
@@ -49,6 +46,7 @@ foreach ($key in $uninstallKeys) {
         $displayName = $_.GetValue("DisplayName")
         $displayVersion = $_.GetValue("DisplayVersion")
         $installDate = $_.GetValue("InstallDate")
+
         if ($displayName -and ($programFilters | Where-Object { $displayName -like "*$_*" })) {
             $installedPrograms += [PSCustomObject]@{
                 Name = $displayName
@@ -126,21 +124,137 @@ $html = @"
 <body>
     <h1>System Information</h1>
     <table>
-        <tr><th>Server Name</th><td>$computerName</td></tr>
-        <tr><th>OS Version</th><td>$osVersion</td></tr>
-        <tr><th>SCCM Installed</th><td>$sccmInstalled</td></tr>
+        <thead>
+            <tr>
+                <th>Server Name</th>
+                <th>OS Version</th>
+                <th>SCCM Installed</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>$computerName</td>
+                <td>$osVersion</td>
+                <td>$sccmInstalled</td>
+            </tr>
+        </tbody>
+    </table>
+    <h1>Organizational Unit (OU)</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>OU</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>$ou</td>
+            </tr>
+        </tbody>
+    </table>
+    <h1>Disk and Volume Information</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Drive Letter</th>
+                <th>Label</th>
+                <th>Total Size (GB)</th>
+            </tr>
+        </thead>
+        <tbody>
+"@
+
+foreach ($volume in $volumes) {
+    $totalSizeGB = [math]::Round($volume.Size / 1GB, 2)
+    $html += "<tr>
+                <td>$($volume.DriveLetter)</td>
+                <td>$($volume.FileSystemLabel)</td>
+                <td>$totalSizeGB</td>
+              </tr>"
+}
+
+$html += @"
+        </tbody>
+    </table>
+    <h1>Installed Programs</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Program Name</th>
+                <th>Version</th>
+                <th>Install Date</th>
+            </tr>
+        </thead>
+        <tbody>
+"@
+
+foreach ($program in $installedPrograms) {
+    $html += "<tr>
+                <td>$($program.Name)</td>
+                <td>$($program.Version)</td>
+                <td>$($program.InstallDate)</td>
+              </tr>"
+}
+
+$html += @"
+        </tbody>
+    </table>
+    <h1>Network Information</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>IP Address</th>
+                <th>Subnet Mask</th>
+                <th>DNS Servers</th>
+            </tr>
+        </thead>
+        <tbody>
+"@
+
+foreach ($net in $networkInfo) {
+    $html += "<tr>
+                <td>$($net.IPv4Address)</td>
+                <td>$($net.SubnetMask)</td>
+                <td>$($net.DNSServers)</td>
+              </tr>"
+}
+
+$html += @"
+        </tbody>
+    </table>
+    <h1>Scheduled Tasks Related to Reboot</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Task Name</th>
+                <th>Days</th>
+                <th>Start Time</th>
+            </tr>
+        </thead>
+        <tbody>
+"@
+
+if ($tasks.Count -gt 0) {
+    foreach ($task in $tasks) {
+        $html += "<tr>
+                    <td>$($task.TaskName)</td>
+                    <td>$(($task.Triggers.DaysOfWeek -join ", ") -replace '\d+', '')</td>
+                    <td>$($task.Triggers.StartBoundary)</td>
+                  </tr>"
+    }
+} else {
+    $html += "<tr>
+                <td colspan='3'>No tasks found in Task Scheduler Library containing 'reboot'.</td>
+              </tr>"
+}
+
+$html += @"
+        </tbody>
     </table>
 </body>
 </html>
 "@
 
 Set-Content -Path $outputFile -Value $html
-Write-Host "HTML file generated locally at $outputFile"
 
-# Copiar o arquivo para o servidor remoto
-try {
-    Copy-Item -Path $outputFile -Destination $remoteFile -Force
-    Write-Host "File successfully copied to $remoteFile"
-} catch {
-    Write-Host "Failed to copy file to $remoteFile. Error: $_"
-}
+Write-Host "HTML file generated at $outputFile"
