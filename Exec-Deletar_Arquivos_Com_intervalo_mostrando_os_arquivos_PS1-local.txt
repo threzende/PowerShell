@@ -1,0 +1,21 @@
+$folderPath = "D:\teste1"
+$counter = 0
+
+# Check if the folder exists
+if (Test-Path $folderPath) {
+    $files = Get-ChildItem -Path $folderPath -File
+    
+    foreach ($file in $files) {
+        Write-Output "Deleting: $($file.FullName)"
+        Remove-Item -Path $file.FullName -Force
+        
+        $counter++
+        if ($counter -eq 20) { # Change this number to set how many files before pausing
+            Write-Output "20 files deleted. Pausing for 10 seconds..."
+            Start-Sleep -Seconds 10 # Change this number to adjust the wait time
+            $counter = 0
+        }
+    }
+} else {
+    Write-Output "The specified folder does not exist." 
+}

