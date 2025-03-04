@@ -6,6 +6,9 @@ Get-Disk | ForEach-Object {
             Name="DiskNumber";Expression={$disk.Number}},
             @{Name="FriendlyName";Expression={$disk.FriendlyName}},
             @{Name="PartitionNumber";Expression={$partition.PartitionNumber}},
-            DriveLetter, FileSystemLabel, Size, SizeRemaining
+            DriveLetter, FileSystemLabel, Size, SizeRemaining,
+            @{Name="SerialNumber";Expression={
+                (Get-PhysicalDisk | Where-Object DeviceID -eq $disk.Number).SerialNumber
+            }}
     }
 }
