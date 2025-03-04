@@ -1,0 +1,10 @@
+# Definir o intervalo de tempo (últimos 3 meses)
+$startDate = (Get-Date).AddMonths(-3)
+
+# Configurar o ID do Evento relacionado a desligamentos (Event ID 6006 é típico para "Event Log stopped")
+$shutdownEventID = 6006
+
+# Recuperar eventos do Event Viewer relacionados a desligamentos
+Get-WinEvent -LogName "System" -FilterHashtable @{Id=$shutdownEventID; StartTime=$startDate} | 
+    Select-Object TimeCreated, Message |
+    Format-Table -AutoSize

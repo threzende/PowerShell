@@ -1,10 +1,13 @@
-# Definir o intervalo de tempo (últimos 3 meses)
-$startDate = (Get-Date).AddMonths(-3)
-
-# Configurar o ID do Evento relacionado a desligamentos (Event ID 6006 é típico para "Event Log stopped")
-$shutdownEventID = 6006
-
-# Recuperar eventos do Event Viewer relacionados a desligamentos
-Get-WinEvent -LogName "System" -FilterHashtable @{Id=$shutdownEventID; StartTime=$startDate} | 
-    Select-Object TimeCreated, Message |
-    Format-Table -AutoSize
+# Definir a data de 3 meses atrás
+$DateFrom = (Get-Date).AddMonths(-3)
+ 
+# IDs de eventos que queremos buscar
+$EventIDs = @(6005, 6006, 6008, 41)
+ 
+# Buscar os eventos no log de Sistema
+$Events = Get-WinEvent -LogName System | Where-Object {
+    $.Id -in $EventIDs -and $.TimeCreated -gt $DateFrom
+}
+ 
+# Exibir os resultados
+$Events | Format-Table TimeCreated, Id, Message -AutoSize
