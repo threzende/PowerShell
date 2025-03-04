@@ -13,7 +13,7 @@ Get-Disk | ForEach-Object {
                 Size             = $volume.Size
                 SizeRemaining    = $volume.SizeRemaining
                 SerialNumber     = (Get-PhysicalDisk | Where-Object DeviceID -eq $disk.Number).SerialNumber
-                DeviceName       = $disk.Location
+                DeviceName       = (Get-WmiObject Win32_DiskDrive | Where-Object DeviceID -eq "\\.\PhysicalDrive$($disk.Number)").PNPDeviceID
             }
         }
     }
