@@ -1,0 +1,19 @@
+Get-Disk | ForEach-Object {
+    $disk = $_
+    Get-Partition -DiskNumber $disk.Number | ForEach-Object {
+        $partition = $_
+        $volume = Get-Volume -DriveLetter $partition.DriveLetter -ErrorAction SilentlyContinue
+        if ($volume) {
+            [PSCustomObject]@{
+                DiskNumber       = $disk.Number
+                FriendlyName     = $disk.FriendlyName
+                PartitionNumber  = $partition.PartitionNumber
+                DriveLetter      = $partition.DriveLetter
+                FileSystemLabel  = $volume.FileSystemLabel
+                Size             = $volume.Size
+                SizeRemaining    = $volume.SizeRemaining
+                SerialNumber     = (Get-PhysicalDisk | Where-Object DeviceID -eq $disk.Number).SerialNumber
+            }
+        }
+    }
+}
