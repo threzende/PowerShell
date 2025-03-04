@@ -1,1 +1,1 @@
-Get-WmiObject -Namespace root\WMI -Class MSFC_FCAdapterHBAAttributes | Select-Object -ExpandProperty NodeWWN
+Get-Disk | Select-Object Number, SerialNumber, UniqueId
