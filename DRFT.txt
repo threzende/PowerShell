@@ -1,10 +1,11 @@
-Get-WinEvent -LogName Security | Where-Object { $_.Id -eq 4624 } | Select-Object TimeCreated, Message | Format-List
-
-
-Get-WinEvent -LogName Security | Where-Object { $_.Id -eq 4624 -and $_.Message -match "NomeDeUsuario" } | Select-Object TimeCreated, Message | Format-List
-
-
-Get-WinEvent -LogName Security | Where-Object { $_.Id -eq 4624 -and $_.Message -match "Logon Type:\s+10" } | Select-Object TimeCreated, Message | Format-List
-
-
-Get-WinEvent -LogName Security | Where-Object { $_.Id -eq 4624 -and $_.Message -match "Logon Type:\s+10" -and $_.Message -notmatch "User:\s+NA" } | Select-Object TimeCreated, Message | Format-List
+Get-Disk | ForEach-Object {
+    $disk = $_
+    Get-Partition -DiskNumber $disk.Number | ForEach-Object {
+        $partition = $_
+        Get-Volume -DriveLetter $partition.DriveLetter | Select-Object @{
+            Name="DiskNumber";Expression={$disk.Number}},
+            @{Name="FriendlyName";Expression={$disk.FriendlyName}},
+            @{Name="PartitionNumber";Expression={$partition.PartitionNumber}},
+            DriveLetter, FileSystemLabel, Size, SizeRemaining
+    }
+}
