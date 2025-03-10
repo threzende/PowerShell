@@ -1,15 +1,19 @@
-# Definir o volume de destino
+# Definir o servidor remoto e o volume de destino
+$Server = "serv1"
 $VolumeLetter = "Z"
 
-# Obter o nome do computador remoto
-$ComputerName = $env:COMPUTERNAME
+# Executar remotamente no servidor 'serv1'
+Invoke-Command -ComputerName $Server -ScriptBlock {
+    # Obter o nome do computador remoto
+    $ComputerName = $env:COMPUTERNAME
 
-# Criar a variável para o novo rótulo
-$Target = "_NTFS" # Você pode personalizar isso
-$NewLabel = "${ComputerName}_${VolumeLetter}${Target}"
+    # Definir o novo rótulo do volume
+    $Target = "_NTFS"
+    $NewLabel = "${ComputerName}_${using:VolumeLetter}${Target}"
 
-# Renomear o volume
-Set-Volume -DriveLetter $VolumeLetter -NewFileSystemLabel $NewLabel
+    # Renomear o volume
+    Set-Volume -DriveLetter $using:VolumeLetter -NewFileSystemLabel $NewLabel
 
-# Confirmar o novo rótulo
-Get-Volume -DriveLetter $VolumeLetter
+    # Confirmar o novo rótulo
+    Get-Volume -DriveLetter $using:VolumeLetter
+}
