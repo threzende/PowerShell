@@ -1,7 +1,18 @@
-Invoke-Command -ComputerName "serv1" -ScriptBlock {
+# Parâmetros iniciais
+$Server = "serv1"
+$VolumeLetter = "Z"
+
+# Executar remotamente sem solicitar credenciais
+Invoke-Command -ComputerName $Server -ScriptBlock {
+    # Obter o nome do computador remoto
     $ComputerName = $env:COMPUTERNAME
-    $VolumeLetter = "Z"
-    $NewLabel = "${ComputerName}_${VolumeLetter}_NTFS"
-    Set-Volume -DriveLetter $VolumeLetter -NewFileSystemLabel $NewLabel
-    Get-Volume -DriveLetter $VolumeLetter
+
+    # Definir o novo rótulo do volume
+    $NewLabel = "${ComputerName}_${using:VolumeLetter}_NTFS"
+
+    # Renomear o volume
+    Set-Volume -DriveLetter $using:VolumeLetter -NewFileSystemLabel $NewLabel
+
+    # Confirmar o novo rótulo
+    Get-Volume -DriveLetter $using:VolumeLetter
 }
