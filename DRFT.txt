@@ -1,13 +1,7 @@
-# Definir a data de 3 meses atrás
-$DateFrom = (Get-Date).AddMonths(-3)
- 
-# IDs de eventos que queremos buscar
-$EventIDs = @(6005, 6006, 6008, 41)
- 
-# Buscar os eventos no log de Sistema
-$Events = Get-WinEvent -LogName System | Where-Object {
-    $.Id -in $EventIDs -and $.TimeCreated -gt $DateFrom
+Invoke-Command -ComputerName "serv1" -ScriptBlock {
+    $ComputerName = $env:COMPUTERNAME
+    $VolumeLetter = "Z"
+    $NewLabel = "${ComputerName}_${VolumeLetter}_NTFS"
+    Set-Volume -DriveLetter $VolumeLetter -NewFileSystemLabel $NewLabel
+    Get-Volume -DriveLetter $VolumeLetter
 }
- 
-# Exibir os resultados
-$Events | Format-Table TimeCreated, Id, Message -AutoSize
