@@ -1,10 +1,15 @@
-# Definir o intervalo de tempo (últimos 3 meses)
-$startDate = (Get-Date).AddMonths(-3)
+# Definir o volume de destino
+$VolumeLetter = "Z"
 
-# Configurar o ID do Evento relacionado a desligamentos (Event ID 6006 é típico para "Event Log stopped")
-$shutdownEventID = 6006
+# Obter o nome do computador remoto
+$ComputerName = $env:COMPUTERNAME
 
-# Recuperar eventos do Event Viewer relacionados a desligamentos
-Get-WinEvent -LogName "System" -FilterHashtable @{Id=$shutdownEventID; StartTime=$startDate} | 
-    Select-Object TimeCreated, Message |
-    Format-Table -AutoSize
+# Criar a variável para o novo rótulo
+$Target = "_NTFS" # Você pode personalizar isso
+$NewLabel = "${ComputerName}_${VolumeLetter}${Target}"
+
+# Renomear o volume
+Set-Volume -DriveLetter $VolumeLetter -NewFileSystemLabel $NewLabel
+
+# Confirmar o novo rótulo
+Get-Volume -DriveLetter $VolumeLetter
