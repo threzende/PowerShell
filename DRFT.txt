@@ -1,18 +1,7 @@
-# Parâmetros iniciais
-$Server = "serv1"
-$VolumeLetter = "Z"
+(Get-ItemProperty -Path HKCU:\Software\Microsoft\Edge\BLBeacon -Name version).version
 
-# Executar remotamente sem solicitar credenciais
-Invoke-Command -ComputerName $Server -ScriptBlock {
-    # Obter o nome do computador remoto
-    $ComputerName = $env:COMPUTERNAME
 
-    # Definir o novo rótulo do volume
-    $NewLabel = "${ComputerName}_${using:VolumeLetter}_NTFS"
+(Get-Item "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe").VersionInfo.FileVersion
 
-    # Renomear o volume
-    Set-Volume -DriveLetter $using:VolumeLetter -NewFileSystemLabel $NewLabel
 
-    # Confirmar o novo rótulo
-    Get-Volume -DriveLetter $using:VolumeLetter
-}
+(Get-AppxPackage Microsoft.MicrosoftEdge).Version
