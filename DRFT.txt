@@ -1,7 +1,21 @@
-(Get-ItemProperty -Path HKCU:\Software\Microsoft\Edge\BLBeacon -Name version).version
+# Nome da interface de rede
+$adapterName = "Ethernet0 3"
 
+# Lista dos servidores DNS que você deseja adicionar
+$dnsServers = @(
+    "192.168.1.1",
+    "192.168.1.2",
+    "8.8.4.4",
+    "200.220.0.10",
+    "208.67.222.222",
+    "1.1.1.1",
+    "9.9.9.9",
+    "192.168.100.1",
+    "10.1.1.1",
+    "198.51.100.1",
+    "203.0.113.1",
+    "8.8.8.8"
+)
 
-(Get-Item "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe").VersionInfo.FileVersion
-
-
-(Get-AppxPackage Microsoft.MicrosoftEdge).Version
+# Aplica os servidores DNS à interface de rede
+Set-DnsClientServerAddress -InterfaceAlias $adapterName -ServerAddresses $dnsServers
