@@ -1,0 +1,1 @@
+New-LocalUser "NomeDoUsuario" -Password (ConvertTo-SecureString "SenhaForte123" -AsPlainText -Force) -FullName "Administrador Local" -Description "Criado via PowerShell" ; Add-LocalGroupMember -Group "Administrators" -Member "NomeDoUsuario"
