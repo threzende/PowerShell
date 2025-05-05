@@ -1,21 +1,2 @@
-# Nome da interface de rede
-$adapterName = "Ethernet0 3"
-
-# Lista dos servidores DNS que você deseja adicionar
-$dnsServers = @(
-    "192.168.1.1",
-    "192.168.1.2",
-    "8.8.4.4",
-    "200.220.0.10",
-    "208.67.222.222",
-    "1.1.1.1",
-    "9.9.9.9",
-    "192.168.100.1",
-    "10.1.1.1",
-    "198.51.100.1",
-    "203.0.113.1",
-    "8.8.8.8"
-)
-
-# Aplica os servidores DNS à interface de rede
-Set-DnsClientServerAddress -InterfaceAlias $adapterName -ServerAddresses $dnsServers
+This task is to add the user to a group, but for that, we need to know the group name.
+If you’re not sure about the group name, could you please check with someone from your team who might have access so we can investigate and try to identify the correct group?
