@@ -1,1 +1,8 @@
-We tried a few procedures with the XXXX team, but we were informed that it will take some time to resolve the issue. Therefore, as a suggestion, I reached out to the requester via email to ask if they could provide us with an alternative account so that we can proceed with the build
+Hello,
+
+XXXXXX submitted some build requests in XXXXXXX, and the forms worked properly, and the builds were successfully completed. However, three of them are for SQL, and I was not able to find that option in the new form.
+
+Do you have an image available for Windows Server 2022 with SQL?
+
+Best regards,
+[Seu Nome]
