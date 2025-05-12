@@ -1,10 +1,1 @@
-Hi Rag,
-
-We have a "build" request under your name, but it is currently being requested in account XXXXXXXX. However, we are experiencing an issue with creating a "build" in this account.
-
-I contacted YYYYY from the IPO Cloud team and attempted a few procedures with her, but we were unable to resolve the issue. She mentioned that it may take some additional time to fix.
-
-Therefore, I asked her if we could suggest that you create the server in another account. Would it be possible for you to indicate another account where we can proceed with this "build"?
-
-Best regards,
-[Seu Nome]
+We tried a few procedures with the XXXX team, but we were informed that it will take some time to resolve the issue. Therefore, as a suggestion, I reached out to the requester via email to ask if they could provide us with an alternative account so that we can proceed with the build
