@@ -1,0 +1,18 @@
+#########
+
+$fcHBAs = Get-WmiObject -Namespace "root\WMI" -Class MSFC_FCAdapterHBAAttributes
+
+foreach ($fcHBA in $fcHBAs) {
+    $wwnBytes = $fcHBA.NodeWWN
+    $wwn = ($wwnBytes | ForEach-Object { "{0:X2}" -f $_ }) -join ""
+    Write-Host "Node WWN: $wwn"
+}
+
+
+
+
+
+
+###########
+
+Get-InitiatorPort | Select-Object -Property PortAddress
