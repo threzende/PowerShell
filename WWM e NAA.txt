@@ -1,0 +1,26 @@
+######
+Get-WmiObject -Namespace "root\WMI" -Class MSFC_FibrePortHBAAttributes | ForEach-Object {
+    $_.Attributes | Select-Object -Property PortWWN, NodeWWN
+}
+
+
+######
+function ConvertTo-HexWWN ($array) {
+    ($array | ForEach-Object { '{0:X2}' -f $_ }) -join ":"
+}
+
+Get-WmiObject -Namespace "root\WMI" -Class MSFC_FibrePortHBAAttributes | ForEach-Object {
+    $portWWN = ConvertTo-HexWWN $_.Attributes.PortWWN
+    $nodeWWN = ConvertTo-HexWWN $_.Attributes.NodeWWN
+    [PSCustomObject]@{
+        PortWWN = $portWWN
+        NodeWWN = $nodeWWN
+    }
+}
+
+
+######
+Get-Disk | Select-Object Number, FriendlyName, UniqueId
+
+######
+Get-Disk | Where-Object { $_.UniqueId -like "naa.*" } | Select-Object Number, FriendlyName, UniqueId
