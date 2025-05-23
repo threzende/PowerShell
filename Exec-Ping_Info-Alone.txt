@@ -1,0 +1,23 @@
+$subnet = "10.187.200"
+$range = 0..254
+
+# Função para realizar o ping
+function Test-Ping {
+    param (
+        [string]$ip
+    )
+
+    $pingResult = Test-Connection -ComputerName $ip -Count 4 -Quiet
+
+    if ($pingResult) {
+        Write-Host "$ip está online" -ForegroundColor Green
+    } else {
+        Write-Host "$ip está offline" -ForegroundColor Red
+    }
+}
+
+# Loop para escanear os IPs da rede
+foreach ($i in $range) {
+    $ip = "$subnet.$i"
+    Test-Ping -ip $ip
+}
