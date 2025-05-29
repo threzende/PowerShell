@@ -1,0 +1,70 @@
+🔄 Alternativa: Utilizar o Office Deployment Tool (ODT)
+Se você possui uma chave de licença VL válida, pode utilizar o Office Deployment Tool (ODT) para baixar e instalar o Office 2016 Professional Plus VL.
+
+Passo a passo:
+Baixe o Office Deployment Tool:
+
+Acesse: Office Deployment Tool
+
+Execute o arquivo baixado e extraia o conteúdo para uma pasta de sua preferência.
+Microsoft
+
+Configure o arquivo configuration.xml:
+
+Crie ou edite o arquivo configuration.xml com o seguinte conteúdo:
+
+xml
+Copiar
+<Configuration>
+  <Add SourcePath="C:\Office2016VL" OfficeClientEdition="64" Channel="PerpetualVL2016">
+    <Product ID="ProPlus2016Volume">
+      <Language ID="en-us" />
+    </Product>
+  </Add>
+  <Display Level="None" AcceptEULA="TRUE" />
+</Configuration>
+Observações:
+
+SourcePath define o caminho onde os arquivos serão baixados.
+
+OfficeClientEdition pode ser "32" ou "64", dependendo da arquitetura desejada.
+
+Baixe os arquivos de instalação:
+
+Abra o Prompt de Comando como administrador.
+
+Navegue até a pasta onde o setup.exe do ODT está localizado.
+
+Execute o comando:
+
+pgsql
+Copiar
+setup.exe /download configuration.xml
+Aguarde o download completo dos arquivos.
+Microsoft Learn
++7
+Experts Exchange
++7
+MS Guides
++7
+
+Instale o Office 2016 VL:
+
+Após o download, execute o comando:
+
+pgsql
+Copiar
+setup.exe /configure configuration.xml
+O Office será instalado conforme as configurações definidas.
+Internet Archive
++4
+techubiz.com
++4
+Suporte Microsoft
++4
+
+Ative o Office:
+
+Após a instalação, abra qualquer aplicativo do Office (como o Word).
+
+Insira sua chave de produto VL válida quando solicitado.
