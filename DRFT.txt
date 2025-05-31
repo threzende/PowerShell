@@ -1,2 +1,5 @@
-This task is to add the user to a group, but for that, we need to know the group name.
-If you’re not sure about the group name, could you please check with someone from your team who might have access so we can investigate and try to identify the correct group?
+Hello,
+Sorry for the delay.
+I spoke with Rodrigo, and he told me that the best way would be to open a decommission for the server SERVERXXXX, and open a new form build to build a new TS server named TSP, either with Windows Server 2019, or by cloning the server TSSERVER933.
+
+However, cloning that system might not be ideal, since the current server is running Windows Server 2016.
