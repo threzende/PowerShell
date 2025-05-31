@@ -1,5 +1,0 @@
-Hello,
-Sorry for the delay.
-I spoke with Rodrigo, and he told me that the best way would be to open a decommission for the server SERVERXXXX, and open a new form build to build a new TS server named TSP, either with Windows Server 2019, or by cloning the server TSSERVER933.
-
-However, cloning that system might not be ideal, since the current server is running Windows Server 2016.
