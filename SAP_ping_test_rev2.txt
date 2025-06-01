@@ -8,7 +8,7 @@
 #   - Ping_Log_SAP_Monitor_UNICO.txt   → todos os eventos (OK + falhas)
 #
 # Para executar:
-# powershell.exe -ExecutionPolicy Bypass -File "C:\temp\Ping_Log_SAP_Monitor.ps1"
+# powershell.exe -ExecutionPolicy Bypass -File "C:\temp\ping_log\Ping_Log_SAP_Monitor.ps1"
 # -------------------------------------------------------
 
 # Caminhos fixos
