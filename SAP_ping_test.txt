@@ -1,0 +1,43 @@
+# Caminhos fixos
+$logDir = "C:\temp\ping_log"
+$ip = "142.250.219.132"
+
+# Cria pasta se não existir
+if (-Not (Test-Path $logDir)) {
+    New-Item -Path $logDir -ItemType Directory | Out-Null
+}
+
+Write-Host "Monitoramento iniciado. Pressione Ctrl+C para parar."
+
+# Arquivos fixos de log
+$logOK = "$logDir\ping_log_ok.txt"
+$logDrop = "$logDir\ping_log_drop.txt"
+$logUnico = "$logDir\ping_log_unico.txt"
+
+# Loop infinito até você cancelar manualmente (Ctrl+C)
+while ($true) {
+    $dataHoraLog = Get-Date -Format "dd/MM/yyyy - HH:mm:ss"
+
+    try {
+        $pingResult = Test-Connection -ComputerName $ip -Count 1 -ErrorAction Stop
+        $tempo = $pingResult.ResponseTime
+        $mensagem = "$dataHoraLog Resposta de $($ip): bytes=32 tempo=$($tempo)ms TTL=$($pingResult.ReplyDetails.Ttl)"
+
+        if ($tempo -gt 400) {
+            $mensagemErro = "$dataHoraLog ERRO: Resposta acima de 400ms ($($tempo) ms)"
+            $mensagemErro | Out-File $logDrop -Encoding UTF8 -Append
+            $mensagemErro | Out-File $logUnico -Encoding UTF8 -Append
+        }
+        else {
+            $mensagem | Out-File $logOK -Encoding UTF8 -Append
+            $mensagem | Out-File $logUnico -Encoding UTF8 -Append
+        }
+    }
+    catch {
+        $mensagemErro = "$dataHoraLog ERRO: Sem resposta do IP $($ip)"
+        $mensagemErro | Out-File $logDrop -Encoding UTF8 -Append
+        $mensagemErro | Out-File $logUnico -Encoding UTF8 -Append
+    }
+
+    Start-Sleep -Seconds 1
+}
