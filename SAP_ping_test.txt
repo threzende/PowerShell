@@ -1,3 +1,5 @@
+#powershell -ExecutionPolicy Bypass -File "C:\temp\ping_log\monitor_ping.ps1"
+
 # Caminhos fixos
 $logDir = "C:\temp\ping_log"
 $ip = "142.250.219.132"
