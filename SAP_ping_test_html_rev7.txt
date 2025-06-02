@@ -1,0 +1,57 @@
+# Ping_Log_SAP_Monitor_UNICO_HTML.ps1
+# -------------------------------------------------------
+# Gera um HTML formatado a partir do arquivo unificado de log,
+# colocando pings acima de 400ms ou sem resposta em vermelho (erro),
+# e pings bem-sucedidos abaixo de 400ms em verde (ok).
+# Agora exibe os logs mais recentes no topo corretamente.
+# -------------------------------------------------------
+
+$logDir = "C:\temp\ping_log"
+$dataAtual = Get-Date -Format "yyyy-MM-dd"
+$logUnico = Join-Path $logDir "Ping_Log_SAP_Monitor_UNICO_$dataAtual.txt"
+$logHtml = Join-Path $logDir "Ping_Log_SAP_Monitor_UNICO_$dataAtual.html"
+
+# Inicializa o HTML com auto-refresh
+@"
+<html>
+<head>
+    <meta charset='UTF-8'>
+    <meta http-equiv="refresh" content="30">
+    <title>Ping Log SAP Monitor - $dataAtual</title>
+    <style>
+        body { font-family: Consolas, monospace; background-color: #f4f4f4; padding: 20px; }
+        .ok { color: green; }
+        .erro { color: red; }
+    </style>
+</head>
+<body>
+    <h2>Ping Log SAP Monitor - $dataAtual</h2>
+    <pre>
+"@ | Set-Content $logHtml -Encoding UTF8
+
+# Processa o arquivo de log unificado e inverte a ordem corretamente
+if (Test-Path $logUnico) {
+    $logs = Get-Content $logUnico | ForEach-Object {
+        if ($_ -match "tempo=([0-9]+) ms") {
+            $tempo = [int]$matches[1]  # Converte o tempo para número
+            if ($tempo -gt 400) {
+                "<span class='erro'>$_</span>"  # Se acima de 400ms, fica vermelho
+            } else {
+                "<span class='ok'>$_</span>"   # Se abaixo de 400ms, fica verde
+            }
+        } elseif ($_ -match "ERRO") {
+            "<span class='erro'>$_</span>"  # Se houver erro, fica vermelho
+        } else {
+            "<span class='ok'>$_</span>"  # Se não houver erro ou tempo, considera como ok
+        }
+    }
+
+    # **Inverte toda a lista de logs corretamente**
+    [Array]::Reverse($logs)
+    $logs | Add-Content $logHtml -Encoding UTF8
+}
+
+# Finaliza o HTML
+"</pre></body></html>" | Add-Content $logHtml -Encoding UTF8
+
+Write-Host "Arquivo HTML gerado com auto-refresh e logs organizados corretamente: $logHtml"

@@ -1,0 +1,104 @@
+# Ping_Log_SAP_Monitor_UNICO_HTML.ps1
+# -------------------------------------------------------
+# Agora exibe os logs mais recentes no topo corretamente, com números em negrito e coloridos.
+# Todos os intervalos Red aparecem em vermelho e negrito.
+# -------------------------------------------------------
+
+$logDir = "C:\temp\ping_log"
+$dataAtual = Get-Date -Format "yyyy-MM-dd"
+$logUnico = Join-Path $logDir "Ping_Log_SAP_Monitor_UNICO_$dataAtual.txt"
+$logHtml = Join-Path $logDir "Ping_Log_SAP_Monitor_UNICO_$dataAtual.html"
+
+$totalOn = [timespan]::Zero
+$totalOff = [timespan]::Zero
+$intervalosRed = @()
+$ultimoStatus = "on"
+$inicioRed = $null
+
+# Processa o arquivo de log unificado e calcula total ON/OFF
+if (Test-Path $logUnico) {
+    $logs = Get-Content $logUnico | ForEach-Object {
+        $horaLog = ""
+        if ($_ -match "(\d{2}:\d{2}:\d{2})") {
+            $horaLog = $matches[1]
+        }
+
+        if ($_ -match "tempo=([0-9]+) ms") {
+            $tempo = [int]$matches[1]
+            if ($tempo -gt 400) {
+                $totalOff += [timespan]::FromSeconds(1)
+                if ($ultimoStatus -eq "on") {
+                    $inicioRed = $horaLog
+                }
+                $ultimoStatus = "off"
+                "<span class='erro'>$_</span>"
+            } else {
+                $totalOn += [timespan]::FromSeconds(1)
+                if ($ultimoStatus -eq "off" -and $inicioRed) {
+                    $intervalosRed += "<strong style='color:red;'>Red: $inicioRed to $horaLog</strong>"
+                    $inicioRed = $null
+                }
+                $ultimoStatus = "on"
+                "<span class='ok'>$_</span>"
+            }
+        } elseif ($_ -match "ERRO") {
+            $totalOff += [timespan]::FromSeconds(1)
+            if ($ultimoStatus -eq "on") {
+                $inicioRed = $horaLog
+            }
+            $ultimoStatus = "off"
+            "<span class='erro'>$_</span>"
+        } else {
+            $totalOn += [timespan]::FromSeconds(1)
+            if ($ultimoStatus -eq "off" -and $inicioRed) {
+                $intervalosRed += "<strong style='color:red;'>Red: $inicioRed to $horaLog</strong>"
+                $inicioRed = $null
+            }
+            $ultimoStatus = "on"
+            "<span class='ok'>$_</span>"
+        }
+    }
+
+    # Se ainda houver um período vermelho em aberto, fechamos ao final
+    if ($inicioRed) {
+        $intervalosRed += "<strong style='color:red;'>Red: $inicioRed to final</strong>"
+    }
+
+    # **Inverte toda a lista de logs corretamente**
+    [Array]::Reverse($logs)
+}
+
+# Converte tempos totais para string formatada com **negrito e cores**
+$tempoOnStr = "<strong style='color:green;'>{0:hh\:mm\:ss}</strong>" -f $totalOn
+$tempoOffStr = "<strong style='color:red;'>{0:hh\:mm\:ss}</strong>" -f $totalOff
+$intervalosRedStr = $intervalosRed -join "<br>"
+
+# Inicializa o HTML com auto-refresh e estilos aprimorados
+@"
+<html>
+<head>
+    <meta charset='UTF-8'>
+    <meta http-equiv="refresh" content="30">
+    <title>Ping Log SAP Monitor - $dataAtual</title>
+    <style>
+        body { font-family: Consolas, monospace; background-color: #f4f4f4; padding: 20px; }
+        h2 { color: blue; font-weight: bold; }
+        .erro { color: red; }
+        .ok { color: green; }
+    </style>
+</head>
+<body>
+    <h2>Ping Log SAP Monitor - $dataAtual</h2>
+    <p>
+        <strong style="color: green;">Total ON:</strong> $tempoOnStr |
+        <strong style="color: red;">Total OFF:</strong> $tempoOffStr
+    </p>
+    <p>$intervalosRedStr</p>
+    <pre>
+"@ | Set-Content $logHtml -Encoding UTF8
+
+# Adiciona logs ao HTML
+$logs | Add-Content $logHtml -Encoding UTF8
+
+# Finaliza o HTML
+"</pre></body></html>" | Add-Content $logHtml -Encoding UTF8
