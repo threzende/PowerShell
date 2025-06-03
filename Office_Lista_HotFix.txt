@@ -1,0 +1,49 @@
+#Lisa por versão do Office que remedeiam a MS16-004
+$ms16_004_kbs = @(
+    # Office 2010
+    "KB3114571", "KB3114552", "KB3114562",
+    # Office 2013
+    "KB2920727", "KB3114477", "KB3114346", "KB3114517",
+    # Office 2016
+    "KB3114402", "KB3114508", "KB3114526", "KB3114570", "KB3114528", "KB3114520"
+)
+
+# Função para verificar se o KB está instalado via Get-HotFix e registro
+function Test-KBInstalled {
+    param (
+        [string]$kb
+    )
+    
+    $found = $false
+
+    # Tenta via Get-HotFix
+    if (Get-HotFix -ErrorAction SilentlyContinue | Where-Object { $_.HotFixID -eq $kb }) {
+        $found = $true
+    }
+
+    # Se não achou, tenta via registro (desinstaladores)
+    if (-not $found) {
+        $paths = @(
+            "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*",
+            "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*"
+        )
+
+        foreach ($path in $paths) {
+            $found = Get-ItemProperty -Path $path -ErrorAction SilentlyContinue |
+                Where-Object { $_.DisplayName -like "$kb" }
+            if ($found) { break }
+        }
+    }
+
+    return [bool]$found
+}
+
+# Resultado
+Write-Host "`nVerificando KBs relacionados à MS16-004..." -ForegroundColor Cyan
+foreach ($kb in $ms16_004_kbs) {
+    if (Test-KBInstalled -kb $kb) {
+        Write-Host "$kb está INSTALADO." -ForegroundColor Green
+    } else {
+        Write-Host "$kb NÃO está instalado!" -ForegroundColor Red
+    }
+}
