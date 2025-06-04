@@ -1,0 +1,179 @@
+
+#powershell.exe -ExecutionPolicy Bypass -File "C:\temp\ping_log\Ping_Log_SAP_Monitor_UNICO_HTML.ps1"
+
+# Início bloco CONFIGURAÇÃO INICIAL
+$logDir = "C:\temp\ping_log"
+$diaAtual = (Get-Date).Day
+$dataHoje = Get-Date -Format "yy-MM-dd"
+$logUnico = Join-Path $logDir "Ping_Log_SAP_Monitor_UNICO_$dataHoje.txt"
+$logHtml = Join-Path $logDir "Ping_Log_SAP_Monitor_UNICO_$dataHoje.html"
+
+$totalOn = [timespan]::Zero
+$totalOff = [timespan]::Zero
+$intervalosRedCurto = @()
+$intervalosRedLongo = @()
+$logsProcessados = @()
+$ultimoStatus = "on"
+$inicioRed = $null
+$erroAnterior = $false
+$ultimoErroRegistrado = $null
+# Fim bloco CONFIGURAÇÃO INICIAL
+
+Write-Host "Monitoramento iniciado para: $dataHoje"
+
+while ($true) {
+    # Início bloco VERIFICAÇÃO DE ENCERRAMENTO OU MUDANÇA DE DIA
+    if (Test-Path "C:\temp\ping_log\stop.txt") {
+        Write-Host "Arquivo de controle detectado. Encerrando script..."
+        Exit
+    }
+
+    if ($diaAtual -ne (Get-Date).Day) {
+        Write-Host "Mudança de data detectada. Atualizando arquivos..."
+        $diaAtual = (Get-Date).Day
+        $dataHoje = Get-Date -Format "yy-MM-dd"
+        $logUnico = Join-Path $logDir "Ping_Log_SAP_Monitor_UNICO_$dataHoje.txt"
+        $logHtml = Join-Path $logDir "Ping_Log_SAP_Monitor_UNICO_$dataHoje.html"
+
+        $totalOn = [timespan]::Zero
+        $totalOff = [timespan]::Zero
+        $intervalosRedCurto = @()
+        $intervalosRedLongo = @()
+        $logsProcessados = @()
+        $ultimoStatus = "on"
+        $inicioRed = $null
+        $erroAnterior = $false
+        $ultimoErroRegistrado = $null
+    }
+    # Fim bloco VERIFICAÇÃO DE ENCERRAMENTO OU MUDANÇA DE DIA
+
+    # Início bloco LIMPEZA DE DADOS ACUMULADOS
+    $intervalosRedCurto = @()
+    $intervalosRedLongo = @()
+    $logsProcessados = @()
+    # Fim bloco LIMPEZA DE DADOS ACUMULADOS
+
+    # Início bloco LEITURA E PROCESSAMENTO DO LOG
+    if (Test-Path $logUnico) {
+        $logs = Get-Content $logUnico | ForEach-Object {
+            $horaLog = ""
+            $dataLog = ""
+
+            if ($_ -match "(\d{2}/\d{2}/\d{4})") {
+                $dataLog = $matches[1]
+            }
+            if ($_ -match "(\d{2}:\d{2}:\d{2})") {
+                $horaLog = $matches[1]
+            }
+
+            if ($_ -match "tempo=([0-9]+) ms") {
+                $tempo = [int]$matches[1]
+                if ($tempo -gt 400) {
+                    $totalOff += [timespan]::FromSeconds(1)
+
+                    if ($ultimoStatus -eq "on") {
+                        $inicioRed = "$dataLog | $horaLog"
+                    }
+
+                    $ultimoStatus = "off"
+                    $erroAnterior = $true
+                    $ultimoErroRegistrado = "$dataLog | $horaLog"
+                    $logsProcessados += "<span class='erro'>$dataLog | $horaLog - $_</span>"
+                } else {
+                    $totalOn += [timespan]::FromSeconds(1)
+
+                    if ($ultimoStatus -eq "off" -and $inicioRed) {
+                        # Início bloco CÁLCULO DE INTERVALO DE RED
+                        $inicioDataHora = [datetime]::ParseExact($inicioRed.Trim(), "dd/MM/yyyy | HH:mm:ss", $null)
+                        $ultimoErroDataHora = [datetime]::ParseExact($ultimoErroRegistrado.Trim(), "dd/MM/yyyy | HH:mm:ss", $null)
+                        $duracaoRed = ($ultimoErroDataHora - $inicioDataHora).TotalSeconds
+
+                        if ($duracaoRed -le 1.5) {
+                            $intervalosRedCurto += "<strong style='color:red;'>$inicioRed - ERRO</strong>"
+                        } elseif ($duracaoRed -gt 1.5) {
+                            # Início bloco FORMATAÇÃO DE INTERVALO
+                            $inicioSplit = $inicioRed.Split('|').Trim()
+                            $fimSplit = $ultimoErroRegistrado.Split('|').Trim()
+
+                            if ($inicioSplit[0] -eq $fimSplit[0]) {
+                                $linhaFormatada = "Red: $($inicioSplit[0]) | $($inicioSplit[1]) to $($fimSplit[1]) - ERRO"
+                            } else {
+                                $linhaFormatada = "Red: $inicioRed to $ultimoErroRegistrado - ERRO"
+                            }
+
+                            $intervalosRedLongo += "<strong style='color:red;'>$linhaFormatada</strong>"
+                            # Fim bloco FORMATAÇÃO DE INTERVALO
+                        }
+
+                        $inicioRed = $null
+                        # Fim bloco CÁLCULO DE INTERVALO DE RED
+                    }
+
+                    $ultimoStatus = "on"
+                    $erroAnterior = $false
+                    $logsProcessados += "<span class='ok'>$dataLog | $horaLog - $_</span>"
+                }
+            } elseif ($_ -match "ERRO") {
+                $totalOff += [timespan]::FromSeconds(1)
+
+                if ($ultimoStatus -eq "on") {
+                    $inicioRed = "$dataLog | $horaLog"
+                }
+
+                $ultimoStatus = "off"
+                $erroAnterior = $true
+                $ultimoErroRegistrado = "$dataLog | $horaLog"
+                $logsProcessados += "<span class='erro'>$dataLog | $horaLog - ERRO</span>"
+            }
+        }
+
+        [Array]::Reverse($logsProcessados)
+
+        # Início bloco ORDENAÇÃO DE INTERVALOS
+        $intervalosRedCurto = $intervalosRedCurto | Sort-Object -Descending
+        $intervalosRedLongo = $intervalosRedLongo | Sort-Object -Descending
+        # Fim bloco ORDENAÇÃO DE INTERVALOS
+    } else {
+        Write-Host "Arquivo de log não encontrado para hoje: $logUnico"
+    }
+    # Fim bloco LEITURA E PROCESSAMENTO DO LOG
+
+    # Início bloco CONSTRUÇÃO DO HTML
+    $tempoOnStr = "<strong style='color:green;'>{0:hh\:mm\:ss}</strong>" -f $totalOn
+    $tempoOffStr = "<strong style='color:red;'>{0:hh\:mm\:ss}</strong>" -f $totalOff
+
+@"
+<html>
+<head>
+    <meta charset='UTF-8'>
+    <meta http-equiv="refresh" content="30">
+    <title>Ping Log SAP Monitor - $dataHoje</title>
+    <style>
+        body { font-family: Consolas, monospace; background-color: #f4f4f4; padding: 20px; }
+        h2 { color: blue; font-weight: bold; }
+        .erro { color: red; font-weight: bold; }
+        .ok { color: green; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+        .column { padding: 10px; background-color: white; border: 1px solid #ccc; }
+    </style>
+</head>
+<body>
+    <h2>Ping Log SAP Monitor - $dataHoje</h2>
+    <p>
+        <strong style="color: green;">Total ON:</strong> $tempoOnStr |
+        <strong style="color: red;">Total OFF:</strong> $tempoOffStr
+    </p>
+    <div class="grid">
+        <div class="column"><h3>Full</h3><pre>$($logsProcessados -join "<br>")</pre></div>
+        <div class="column"><h3>RED + de um segundo</h3><pre>$($intervalosRedLongo -join "<br>")</pre></div>
+        <div class="column"><h3>RED 1 segundo</h3><pre>$($intervalosRedCurto -join "<br>")</pre></div>
+    </div>
+</body>
+</html>
+"@ | Set-Content $logHtml -Encoding UTF8
+    # Fim bloco CONSTRUÇÃO DO HTML
+
+    Write-Host "Arquivo HTML atualizado: $logHtml"
+
+    Start-Sleep -Seconds 30
+}
