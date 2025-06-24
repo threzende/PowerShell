@@ -1,2 +1,6 @@
-This task is to add the user to the group, but to do that, we need to know the correct group name.
-Could you please inform us of the group name? We couldn't find the one provided in AD.
+Hi Christopher,
+
+Regarding task 933349498, could you please check if this printer is new or if it’s replacing an old one?
+And if it’s a new one, could you let me know if there’s another printer located nearby?
+
+Thanks in advance!
