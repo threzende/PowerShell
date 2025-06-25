@@ -1,6 +1,1 @@
-Hi Christopher,
-
-Regarding task 933349498, could you please check if this printer is new or if it’s replacing an old one?
-And if it’s a new one, could you let me know if there’s another printer located nearby?
-
-Thanks in advance!
+The incident was initially assigned to our NJ team. However, as you may know, the ServiceNow instance for LI has been migrated, so I’m now transferring it to the appropriate queue for the LI team.
