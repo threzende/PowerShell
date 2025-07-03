@@ -1,1 +1,1 @@
-aws ec2 describe-instances --instance-ids i-0abcdef1234567890 i-0fedcba9876543210 --query "Reservations[*].Instances[*].{InstanceId:InstanceId,Name:Tags[?Key=='Name']|[0].Value,State:State.Name,PrivateIp:PrivateIpAddress}" --output table --profile NomeDoSeuPerfilAWS1 --region us-east-1
+aws ec2 describe-instances --instance-ids i-0abc123def456 --profile nome-do-perfil
