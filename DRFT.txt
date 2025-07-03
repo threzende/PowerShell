@@ -1,1 +1,5 @@
-aws sts get-caller-identity
+aws ec2 describe-instances `
+  --instance-ids i-0abc123456789def0 `
+  --query "Reservations[*].Instances[*].{InstanceId:InstanceId,Name:Tags[?Key=='Name']|[0].Value,State:State.Name,PrivateIp:PrivateIpAddress}" `
+  --output table `
+  --region us-east-1
