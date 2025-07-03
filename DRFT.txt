@@ -1,1 +1,1 @@
-Get-Content $HOME\.aws\config
+aws sts get-caller-identity
