@@ -1,0 +1,181 @@
+#To Run
+#powershell.exe -ExecutionPolicy Bypass -File "C:\temp\ping_log\DC\Ping_Log_SAP_Monitor_Full_DC.ps1"
+
+$logDir = "C:\temp\ping_log\DC"
+$ip = "142.250.219.132"
+
+if (-Not (Test-Path $logDir)) {
+    New-Item -Path $logDir -ItemType Directory | Out-Null
+}
+
+Write-Host "Monitoramento FULL iniciado. Pressione Ctrl+C para parar."
+
+$diaAtual = (Get-Date).Day
+$dataHoje = Get-Date -Format "yy-MM-dd"
+
+function Atualiza-Caminhos {
+    $global:dataHoje = Get-Date -Format "yy-MM-dd"
+    $global:logOK = Join-Path $logDir "Ping_Log_SAP_Monitor_DC_OK_$dataHoje.txt"
+    $global:logDrop = Join-Path $logDir "Ping_Log_SAP_Monitor_DC_DROP_$dataHoje.txt"
+    $global:logUnico = Join-Path $logDir "Ping_Log_SAP_Monitor_DC_UNICO_$dataHoje.txt"
+    $global:logHtmlBH = Join-Path $logDir "Ping_Log_SAP_Monitor_BH_DC_UNICO_$dataHoje.html"
+    $global:logHtmlNBH = Join-Path $logDir "Ping_Log_SAP_Monitor_NBH_DC_UNICO_$dataHoje.html"
+}
+Atualiza-Caminhos
+
+$totalOn = [timespan]::Zero
+$totalOff = [timespan]::Zero
+$ultimoHtmlUpdate = Get-Date
+
+while ($true) {
+    if ($diaAtual -ne (Get-Date).Day) {
+        Write-Host "Mudança de dia detectada. Reiniciando variáveis..."
+        $diaAtual = (Get-Date).Day
+        Atualiza-Caminhos
+        $totalOn = [timespan]::Zero
+        $totalOff = [timespan]::Zero
+    }
+
+    $tempoInicio = Get-Date
+    $dataHoraLog = Get-Date -Format "dd/MM/yyyy - HH:mm:ss"
+    $resultado = ping.exe -n 1 -w 1000 $ip 2>&1
+    $resultadoTexto = $resultado -join "`n"
+
+    if ($resultadoTexto -match "Resposta de .*tempo[=<]([0-9]+)ms") {
+        $tempo = [int]$matches[1]
+        $mensagem = "$dataHoraLog Resposta de $($ip): tempo=$($tempo) ms"
+
+        if ($tempo -gt 400) {
+            $mensagemErro = "$dataHoraLog ERRO: Resposta acima de 400ms ($($tempo) ms)"
+            $mensagemErro | Out-File $logDrop -Encoding UTF8 -Append
+            $mensagemErro | Out-File $logUnico -Encoding UTF8 -Append
+            $totalOff += [timespan]::FromSeconds(1)
+        } else {
+            $mensagem | Out-File $logOK -Encoding UTF8 -Append
+            $mensagem | Out-File $logUnico -Encoding UTF8 -Append
+            $totalOn += [timespan]::FromSeconds(1)
+        }
+    } else {
+        $mensagemErro = "$dataHoraLog ERRO: Sem resposta do IP $($ip)"
+        $mensagemErro | Out-File $logDrop -Encoding UTF8 -Append
+        $mensagemErro | Out-File $logUnico -Encoding UTF8 -Append
+        $totalOff += [timespan]::FromSeconds(1)
+    }
+
+    if (((Get-Date) - $ultimoHtmlUpdate).TotalSeconds -ge 30) {
+        $ultimoHtmlUpdate = Get-Date
+        $logsBH = @()
+        $logsNBH = @()
+        $redCurto = @()
+        $redLongo = @()
+
+        if (Test-Path $logUnico) {
+            $logs = Get-Content $logUnico
+            foreach ($line in $logs) {
+                if ($line -match "(\d{2}/\d{2}/\d{4})") { $dataLog = $matches[1] }
+                if ($line -match "(\d{2}:\d{2}:\d{2})") { $horaLog = $matches[1] }
+
+                $hora = [datetime]::ParseExact($horaLog, "HH:mm:ss", $null).TimeOfDay
+                if ($hora -ge ([TimeSpan]::Parse("06:00:00")) -and $hora -le ([TimeSpan]::Parse("19:00:00"))) {
+                    $logsBH += $line
+                } else {
+                    $logsNBH += $line
+                }
+            }
+
+            function Monta-HTML ($logArray, $filePath, $onTime, $offTime, $periodo) {
+                $proc = @()
+                $short = @()
+                $long = @()
+                $lastStatus = "on"
+                $inicioRed = $null
+                $ultimoErro = $null
+
+                foreach ($l in $logArray) {
+                    if ($l -match "(\d{2}/\d{2}/\d{4})") { $d = $matches[1] }
+                    if ($l -match "(\d{2}:\d{2}:\d{2})") { $h = $matches[1] }
+                    if ($l -match "tempo=([0-9]+) ms") {
+                        $tempo = [int]$matches[1]
+                        if ($tempo -gt 400) {
+                            if ($lastStatus -eq "on") { $inicioRed = "$d | $h" }
+                            $lastStatus = "off"
+                            $ultimoErro = "$d | $h"
+                            $proc += "<span class='erro'>$d | $h - $l</span>"
+                        } else {
+                            if ($lastStatus -eq "off" -and $inicioRed) {
+                                $ini = [datetime]::ParseExact($inicioRed.Trim(), "dd/MM/yyyy | HH:mm:ss", $null)
+                                $fim = [datetime]::ParseExact($ultimoErro.Trim(), "dd/MM/yyyy | HH:mm:ss", $null)
+                                $duracao = ($fim - $ini).TotalSeconds
+                                if ($duracao -le 1.5) {
+                                    $short += "<strong style='color:red;'>$inicioRed - ERRO</strong>"
+                                } else {
+                                    $linhaFormatada = if ($inicioRed.Split('|')[0].Trim() -eq $ultimoErro.Split('|')[0].Trim()) {
+                                        "Red: $($inicioRed.Split('|')[0].Trim()) | $($inicioRed.Split('|')[1].Trim()) to $($ultimoErro.Split('|')[1].Trim()) - ERRO"
+                                    } else {
+                                        "Red: $inicioRed to $ultimoErro - ERRO"
+                                    }
+                                    $long += "<strong style='color:red;'>$linhaFormatada</strong>"
+                                }
+                                $inicioRed = $null
+                            }
+                            $lastStatus = "on"
+                            $proc += "<span class='ok'>$d | $h - $l</span>"
+                        }
+                    } elseif ($l -match "ERRO") {
+                        if ($lastStatus -eq "on") { $inicioRed = "$d | $h" }
+                        $lastStatus = "off"
+                        $ultimoErro = "$d | $h"
+                        $proc += "<span class='erro'>$d | $h - ERRO</span>"
+                    }
+                }
+
+                [Array]::Reverse($proc)
+                $short = $short | Sort-Object -Descending
+                $long = $long | Sort-Object -Descending
+
+                $tempoOnStr = "<strong style='color:green;'>{0}</strong>" -f $onTime.ToString("hh\:mm\:ss")
+                $tempoOffStr = "<strong style='color:red;'>{0}</strong>" -f $offTime.ToString("hh\:mm\:ss")
+
+                $html = @"
+<html>
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="refresh" content="30">
+<title>Ping Log SAP Monitor $periodo - $dataHoje</title>
+<style>
+body { font-family: Consolas; background-color: #f4f4f4; padding: 20px; }
+h2 { color: blue; font-weight: bold; }
+.erro { color: red; font-weight: bold; }
+.ok { color: green; }
+.grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.column { padding: 10px; background-color: white; border: 1px solid #ccc; }
+</style>
+</head>
+<body>
+<h2>Ping Log SAP Monitor $periodo - $dataHoje</h2>
+<p>
+<strong style='color:green;'>Total ON:</strong> $tempoOnStr |
+<strong style='color:red;'>Total OFF:</strong> $tempoOffStr
+</p>
+<div class="grid">
+<div class="column"><h3>Full</h3><pre>$($proc -join "<br>")</pre></div>
+<div class="column"><h3>RED + de um segundo</h3><pre>$($long -join "<br>")</pre></div>
+<div class="column"><h3>RED 1 segundo</h3><pre>$($short -join "<br>")</pre></div>
+</div>
+</body>
+</html>
+"@
+                $html | Set-Content $filePath -Encoding UTF8
+            }
+
+            Monta-HTML -logArray $logsBH -filePath $logHtmlBH -onTime $totalOn -offTime $totalOff -periodo "BH"
+            Monta-HTML -logArray $logsNBH -filePath $logHtmlNBH -onTime $totalOn -offTime $totalOff -periodo "NBH"
+            Write-Host "HTML BH/NBH atualizado."
+        }
+    }
+
+    $tempoFim = Get-Date
+    $diferenca = ($tempoFim - $tempoInicio).TotalMilliseconds
+    $esperaRestante = 1000 - $diferenca
+    if ($esperaRestante -gt 0) { Start-Sleep -Milliseconds $esperaRestante }
+}

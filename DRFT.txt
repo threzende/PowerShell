@@ -1,38 +1,16 @@
-Para Office 2016 (componente principal)
-KB3114527:
+# Define o intervalo de tempo
+$dataInicio = (Get-Date).Date.AddHours(1)   # Hoje às 01:00
+$dataFim = (Get-Date).Date.AddHours(7)      # Hoje às 07:00
 
-Versão 32 bits
-https://www.microsoft.com/en-us/download/details.aspx?id=50573
+# Define os IDs de evento relevantes
+$eventosImportantes = @(6005, 6006, 6008, 1074, 12)
 
-Versão 64 bits
-
-Para Excel 2016
-KB3114520:
-
-Versão 32 bits
-https://www.microsoft.com/en-us/download/details.aspx?id=50575
-
-Versão 64 bits
-
-Para PowerPoint 2016
-KB3114518:
-
-Versão 32 bits
-https://www.microsoft.com/en-us/download/details.aspx?id=50571
-
-Versão 64 bits
-
-Para Word 2016
-KB3114526:
-
-Versão 32 bits
-
-
-Versão 64 bits
-
-Para Visio 2016 (se aplicável)
-KB3114511:
-
-Versão 32 bits
-
-Versão 64 bits
+# Busca os eventos no log do sistema
+Get-WinEvent -FilterHashtable @{
+    LogName = 'System'
+    ID = $eventosImportantes
+    StartTime = $dataInicio
+    EndTime = $dataFim
+} | 
+Sort-Object TimeCreated |
+Select-Object TimeCreated, Id, ProviderName, Message
