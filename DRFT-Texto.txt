@@ -1,2 +1,1 @@
-This task is to add the user to the group, but to do that, we need to know the correct group name.
-Could you please inform us of the group name? We couldn't find the one provided in AD.
+The incident was initially assigned to our NJ team. However, as you may know, the ServiceNow instance for LI has been migrated, so I’m now transferring it to the appropriate queue for the LI team.
