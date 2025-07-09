@@ -1,16 +1,25 @@
-# Define o intervalo de tempo
+# Define intervalo de data e hora
 $dataInicio = (Get-Date).Date.AddHours(1)   # Hoje às 01:00
 $dataFim = (Get-Date).Date.AddHours(7)      # Hoje às 07:00
 
-# Define os IDs de evento relevantes
+# IDs dos eventos relevantes
 $eventosImportantes = @(6005, 6006, 6008, 1074, 12)
 
-# Busca os eventos no log do sistema
-Get-WinEvent -FilterHashtable @{
+# Busca eventos no log do sistema
+$eventos = Get-WinEvent -FilterHashtable @{
     LogName = 'System'
     ID = $eventosImportantes
     StartTime = $dataInicio
     EndTime = $dataFim
-} | 
+} |
 Sort-Object TimeCreated |
 Select-Object TimeCreated, Id, ProviderName, Message
+
+# Exibe os eventos encontrados
+$eventos
+
+# Salva em CSV para análise futura
+$arquivoCSV = "$env:USERPROFILE\Desktop\Eventos_Servidor.csv"
+$eventos | Export-Csv -Path $arquivoCSV -NoTypeInformation -Encoding UTF8
+
+Write-Host "`n>>> Resultado salvo em: $arquivoCSV" -ForegroundColor Green
