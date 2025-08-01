@@ -8,4 +8,8 @@ E:\VS\Installer\vs_Community.exe --noWeb --channelURI "E:\VS\Installer\channelMa
 
 
 
-PsExec.exe \\MAQDESTINO -s -i "C:\temp\vs\installer\vs_Community.exe" --noWeb --channelURI "C:\temp\vs\installer\channelManifest.json"
+PsExec.exe \\MAQDESTINO -s -i 1 "C:\temp\vs\installer\vs_Community.exe" --noWeb --channelURI "C:\temp\vs\installer\channelManifest.json"
+
+
+
+-s -i 1 "C:\temp\vs\installer\vs_Community.exe" --noWeb --channelURI "C:\temp\vs\installer\channelManifest.json"
