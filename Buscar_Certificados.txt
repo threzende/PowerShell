@@ -1,0 +1,19 @@
+# Caminho da pasta dos .cer
+$pastaCer = "C:\temp\vs\installer\Certificates"
+
+# Carrega todos os certificados raiz confiáveis do computador
+$certsRaiz = Get-ChildItem -Path Cert:\LocalMachine\Root
+
+# Para cada arquivo .cer na pasta...
+Get-ChildItem -Path $pastaCer -Filter *.cer | ForEach-Object {
+    $certArquivo = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($_.FullName)
+    $hashCer = $certArquivo.Thumbprint
+
+    # Procura hash igual na loja de certificados
+    $instalado = $certsRaiz | Where-Object { $_.Thumbprint -eq $hashCer }
+    if ($instalado) {
+        Write-Host "INSTALADO: $($_.Name) (`$hashCer`)" -ForegroundColor Green
+    } else {
+        Write-Host "NÃO ENCONTRADO: $($_.Name) (`$hashCer`)" -ForegroundColor Yellow
+    }
+}
