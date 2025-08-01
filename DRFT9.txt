@@ -1,1 +1,3 @@
 vs_Community.exe --layout "C:\temp\vs\installer" --lang en-US --add Microsoft.VisualStudio.Workload.Data
+
+vs_Community.exe --layout "C:\TEMP\VS\installer" --lang en-US --add Microsoft.VisualStudio.Workload.Data --includeRecommended --includeOptional
