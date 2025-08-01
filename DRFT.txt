@@ -1,1 +1,1 @@
-aws ec2 describe-subnets --region us-east-1 --query "Subnets[*].{VPC:VpcId,Subnet:SubnetId,CIDR:CidrBlock}" --output table
+vs_Community.exe --layout "C:\temp\vs\installer" --lang en-US --add Microsoft.VisualStudio.Workload.Data
