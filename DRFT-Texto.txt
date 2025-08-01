@@ -1,1 +1,0 @@
-The incident was initially assigned to our NJ team. However, as you may know, the ServiceNow instance for LI has been migrated, so I’m now transferring it to the appropriate queue for the LI team.
