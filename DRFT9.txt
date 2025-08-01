@@ -6,3 +6,6 @@ vs_Community.exe --layout "C:\TEMP\VS\installer" --lang en-US --add Microsoft.Vi
 
 E:\VS\Installer\vs_Community.exe --noWeb --channelURI "E:\VS\Installer\channelManifest.json"
 
+
+
+PsExec.exe \\MAQDESTINO -s -i "C:\temp\vs\installer\vs_Community.exe" --noWeb --channelURI "C:\temp\vs\installer\channelManifest.json"
