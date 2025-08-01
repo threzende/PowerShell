@@ -1,1 +1,1 @@
-HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp
+vs_Community.exe --layout "C:\temp\vs\installer" --lang en-US --add Microsoft.VisualStudio.Workload.Data
