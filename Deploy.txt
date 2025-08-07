@@ -1,0 +1,30 @@
+###### 7 ZIP com PSEXEC
+
+Ir com o CMD até a pasta que esta o PSEXEC
+PsExec.exe \\labwks02 -s -i "C:\temp\7zip\7z2301-x64.exe" /S
+
+
+####################################################
+
+
+################# Adobe
+
+
+TO install descompacatado:
+PsExec.exe \\labwks02 -s -i msiexec.exe /i "C:\temp\Adobe\adobe_descompactado\AcroRead.msi" /qn
+
+
+Para pegar o codigo para desinstalar
+
+
+PS C:\Windows\system32> Get-WmiObject -Query "SELECT IdentifyingNumber, Name FROM Win32_Product WHERE Name LIKE 'Adobe Acrobat Reader%'"
+
+IdentifyingNumber : {AC76BA86-7AD7-1033-7B44-AC0F074E4100}
+Name              : Adobe Acrobat Reader DC
+
+
+
+
+
+###########################################
+
