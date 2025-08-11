@@ -1,0 +1,20 @@
+# Nome da coleção
+$CollectionName = "test2"
+# Caminho do arquivo com a lista
+$ComputersList = Get-Content "C:\Temp\PCs.txt"
+
+# Carregar módulo SCCM
+Import-Module ($Env:SMS_ADMIN_UI_PATH.Substring(0,$Env:SMS_ADMIN_UI_PATH.Length-5) + '\ConfigurationManager.psd1')
+
+# Mudar para o site SCCM (ex: LAB é o código do site)
+cd LAB:
+
+foreach ($Comp in $ComputersList) {
+    $Device = Get-CMDevice -Name $Comp
+    if ($Device) {
+        Add-CMDeviceCollectionDirectMembershipRule -CollectionName $CollectionName -ResourceId $Device.ResourceId
+        Write-Host "Adicionado: $Comp"
+    } else {
+        Write-Host "Não encontrado no SCCM: $Comp" -ForegroundColor Yellow
+    }
+}

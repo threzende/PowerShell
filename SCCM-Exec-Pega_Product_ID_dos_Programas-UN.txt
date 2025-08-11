@@ -1,0 +1,7 @@
+$msiPath = "\\dclab01\SCCM_Softwares\GoogleChrome\googlechromestandaloneenterprise64.msi"
+$windowsInstaller = New-Object -ComObject WindowsInstaller.Installer
+$database = $windowsInstaller.GetType().InvokeMember("OpenDatabase", "InvokeMethod", $null, $windowsInstaller, @($msiPath, 0))
+$view = $database.OpenView("SELECT Value FROM Property WHERE Property='ProductCode'")
+$view.Execute()
+$record = $view.Fetch()
+$record.StringData(1)
