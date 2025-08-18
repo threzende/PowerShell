@@ -1,0 +1,161 @@
+# ===== Parâmetros =====
+$User        = 'labadm2'
+$ClientName  = 'LABWKS02'     # como aparece no hostname
+$Hours       = 1
+
+# ===== Descobrir DCs =====
+$DCs = (Get-ADDomainController -Filter *).HostName
+
+# ===== Resolver IP do cliente (se possível) =====
+$ClientIPs = @()
+try {
+  $ClientIPs = (Resolve-DnsName -Name $ClientName -Type A -ErrorAction Stop |
+                Where-Object { $_.IPAddress -match '^\d{1,3}(\.\d{1,3}){3}$' } |
+                Select-Object -ExpandProperty IPAddress) | Sort-Object -Unique
+} catch { }
+
+$since = (Get-Date).AddHours(-$Hours)
+
+Write-Host "Procurando por usuário '$User' na última $Hours hora(s). Cliente: $ClientName (IPs: $($ClientIPs -join ', '))"
+Write-Host "DCs: $($DCs -join ', ')"
+
+
+# ===== Função utilitária para extrair campos por nome =====
+function Get-EventDataValue {
+  param($EventRecord, $Name)
+  try {
+    $xml = [xml]$EventRecord.ToXml()
+    return ($xml.Event.EventData.Data | Where-Object { $_.Name -eq $Name }).'#text'
+  } catch {
+    return $null
+  }
+}
+
+$all = @()
+
+foreach ($dc in $DCs) {
+  try {
+    # --- 4768: Ticket Granting Ticket (Kerberos AS) ---
+    $f4768 = @"
+<QueryList>
+  <Query Id="0" Path="Security">
+    <Select Path="Security">
+      *[System[(EventID=4768) and TimeCreated[@SystemTime &gt;= '{0}']]]
+      and
+      *[EventData[Data[@Name='TargetUserName']='{1}']]
+    </Select>
+  </Query>
+</QueryList>
+"@ -f ($since.ToUniversalTime().ToString("o")), $User
+
+    $ev4768 = Get-WinEvent -ComputerName $dc -FilterXml $f4768 -ErrorAction SilentlyContinue
+
+    # --- 4776: NTLM Authentication ---
+    $f4776 = @"
+<QueryList>
+  <Query Id="0" Path="Security">
+    <Select Path="Security">
+      *[System[(EventID=4776) and TimeCreated[@SystemTime &gt;= '{0}']]]
+      and
+      *[EventData[Data[@Name='TargetUserName']='{1}']]
+    </Select>
+  </Query>
+</QueryList>
+"@ -f ($since.ToUniversalTime().ToString("o")), $User
+
+    $ev4776 = Get-WinEvent -ComputerName $dc -FilterXml $f4776 -ErrorAction SilentlyContinue
+
+    # --- 4624: Logon no DC ---
+    $f4624 = @"
+<QueryList>
+  <Query Id="0" Path="Security">
+    <Select Path="Security">
+      *[System[(EventID=4624) and TimeCreated[@SystemTime &gt;= '{0}']]]
+      and
+      *[EventData[Data[@Name='TargetUserName']='{1}']]
+    </Select>
+  </Query>
+</QueryList>
+"@ -f ($since.ToUniversalTime().ToString("o")), $User
+
+    $ev4624 = Get-WinEvent -ComputerName $dc -FilterXml $f4624 -ErrorAction SilentlyContinue
+
+    $events = @()
+    if ($ev4768) { $events += $ev4768 }
+    if ($ev4776) { $events += $ev4776 }
+    if ($ev4624) { $events += $ev4624 }
+
+    foreach ($evt in $events) {
+      $id        = $evt.Id
+      $when      = $evt.TimeCreated
+      $machine   = $evt.MachineName
+
+      switch ($id) {
+        4768 {
+          $clientAddr = Get-EventDataValue -EventRecord $evt -Name 'ClientAddress'
+          $suppliedWk = Get-EventDataValue -EventRecord $evt -Name 'Workstation'
+          $realm      = Get-EventDataValue -EventRecord $evt -Name 'TargetDomainName'
+          $matchedClient =
+            ($suppliedWk -and ($suppliedWk -imatch "^$ClientName\$?")) -or
+            ($clientAddr -and $ClientIPs -and ($ClientIPs -contains $clientAddr))
+          $all += [pscustomobject]@{
+            DC            = $machine
+            TimeCreated   = $when
+            EventID       = 4768
+            Mechanism     = 'Kerberos AS (TGT)'
+            ClientName    = $suppliedWk
+            ClientIP      = $clientAddr
+            User          = $User
+            TargetDomain  = $realm
+            MatchClient   = $matchedClient
+          }
+        }
+        4776 {
+          $workstation = Get-EventDataValue -EventRecord $evt -Name 'Workstation'
+          $status      = Get-EventDataValue -EventRecord $evt -Name 'Status'
+          $matchedClient = $workstation -and ($workstation -imatch "^$ClientName\$?")
+          $all += [pscustomobject]@{
+            DC            = $machine
+            TimeCreated   = $when
+            EventID       = 4776
+            Mechanism     = 'NTLM'
+            ClientName    = $workstation
+            ClientIP      = $null
+            User          = $User
+            TargetDomain  = $null
+            MatchClient   = $matchedClient
+            Extra         = "Status=$status"
+          }
+        }
+        4624 {
+          $ip          = Get-EventDataValue -EventRecord $evt -Name 'IpAddress'
+          $wk          = Get-EventDataValue -EventRecord $evt -Name 'WorkstationName'
+          $logonType   = Get-EventDataValue -EventRecord $evt -Name 'LogonType'
+          $matchedClient =
+            ($wk -and ($wk -imatch "^$ClientName\$?")) -or
+            ($ip -and $ClientIPs -and ($ClientIPs -contains $ip))
+          $all += [pscustomobject]@{
+            DC            = $machine
+            TimeCreated   = $when
+            EventID       = 4624
+            Mechanism     = 'Logon no DC'
+            ClientName    = $wk
+            ClientIP      = $ip
+            User          = $User
+            TargetDomain  = $null
+            MatchClient   = $matchedClient
+            Extra         = "LogonType=$logonType"
+          }
+        }
+      }
+    }
+  } catch {
+    Write-Warning "Falha ao consultar ${dc}: $($_.Exception.Message)"
+  }
+}
+
+# ===== Saída =====
+$all |
+  Sort-Object @{Expression='MatchClient';Descending=$true}, @{Expression='TimeCreated';Descending=$true} |
+  Select-Object TimeCreated, DC, EventID, Mechanism, User, ClientName, ClientIP, TargetDomain, MatchClient, Extra |
+  Format-Table -AutoSize
