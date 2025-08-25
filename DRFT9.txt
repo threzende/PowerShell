@@ -1,15 +1,19 @@
-vs_Community.exe --layout "C:\temp\vs\installer" --lang en-US --add Microsoft.VisualStudio.Workload.Data
+Hive:
+HKEY_LOCAL_MACHINE
 
-vs_Community.exe --layout "C:\TEMP\VS\installer" --lang en-US --add Microsoft.VisualStudio.Workload.Data --includeRecommended --includeOptional
+Key:
 
-
-
-E:\VS\Installer\vs_Community.exe --noWeb --channelURI "E:\VS\Installer\channelManifest.json"
-
+SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{56EB18F8-B008-4CBD-B6D2-8C97FE7E9062}
 
 
-PsExec.exe \\MAQDESTINO -s -i 1 "C:\temp\vs\installer\vs_Community.exe" --noWeb --channelURI "C:\temp\vs\installer\channelManifest.json"
+Value name:
+pv
 
+Data type:
+Version
 
+Operator:
+Greater than or equal to
 
--s -i 1 "C:\temp\vs\installer\vs_Community.exe" --noWeb --channelURI "C:\temp\vs\installer\channelManifest.json"
+Value:
+139.0.3405.111
