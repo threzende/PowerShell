@@ -17,3 +17,13 @@ Greater than or equal to
 
 Value:
 139.0.3405.111
+
+
+
+------------------------------------------------------------------
+
+msiexec /i "microsoft-edge-138-0-3351-77.msi" /qn /norestart REBOOT=ReallySuppress
+
+
+
+msiexec /x {36DD0BCA-DB49-3B7A-9A22-F0A3FDFA86B4} /qn /norestart REBOOT=ReallySuppress
