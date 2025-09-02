@@ -1,0 +1,5 @@
+# --- RESCUE ADMIN (curto/compatível com WS2012) ---
+$u='rescue-admin';$pw='TroqueEstaSenha#2025!'
+net user $u "$pw" /add 2>$null
+net localgroup Administrators $u /add 2>$null
+# --- FIM RESCUE ADMIN ---

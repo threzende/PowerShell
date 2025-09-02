@@ -1,0 +1,32 @@
+# Fail fast
+$ErrorActionPreference = 'Stop'
+
+# === CONFIG ===
+$User = 'localtemp1'
+$Password = 'TroqueEstaSenhaForte#2025!'   # troque por uma senha forte
+
+# Resolve o nome local do grupo "Administrators" (PT/EN)
+$admSid = New-Object System.Security.Principal.SecurityIdentifier 'S-1-5-32-544'
+$adminGroupName = $admSid.Translate([System.Security.Principal.NTAccount]).Value.Split('\')[-1]
+
+# Cria/garante a conta
+$comp = [ADSI]"WinNT://$env:COMPUTERNAME,computer"
+$userObj = $null
+try { $userObj = [ADSI]"WinNT://$env:COMPUTERNAME/$User,user" } catch {}
+
+if (-not $userObj) {
+  $userObj = $comp.Create('user', $User)
+  $userObj.SetPassword($Password)
+  $userObj.SetInfo()
+} else {
+  # garante que você sabe a senha
+  $userObj.SetPassword($Password)
+  $userObj.SetInfo()
+}
+
+# (opcional) Senha nunca expira p/ conta temporária
+try { wmic UserAccount where "Name='$User' and LocalAccount='True'" set PasswordExpires=False | Out-Null } catch {}
+
+# Adiciona ao grupo de Administradores (idempotente)
+$group = [ADSI]"WinNT://$env:COMPUTERNAME/$adminGroupName,group"
+try { $group.Add("WinNT://$env:COMPUTERNAME/$User,user") } catch {}
