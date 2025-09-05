@@ -1,0 +1,4 @@
+https://zoom.us/client/6.5.9.11873/ZoomInstallerFull.msi?archType=x64
+
+
+msiexec /i "C:\temp\zoom\ZoomInstallerFull.msi" /qn /norestart MSIRestartManagerControl=Disable
