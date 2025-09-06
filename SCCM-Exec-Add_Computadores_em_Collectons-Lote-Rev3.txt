@@ -1,0 +1,17 @@
+# Conectar ao drive do SCCM
+cd LAB:
+
+# Carregar lista de servidores
+$DeviceList = Get-Content "C:\temp\PCs.txt"
+$CollectionName = "test3"
+
+# Adicionar cada servidor à collection
+$DeviceList | ForEach-Object {
+    $Device = Get-CMDevice -Name $_
+    if ($Device) {
+        Add-CMDeviceCollectionDirectMembershipRule -CollectionName $CollectionName -ResourceID $Device.ResourceID
+        Write-Host "Adicionado: $($_)"
+    } else {
+        Write-Warning "Dispositivo não encontrado: $($_)"
+    }
+}

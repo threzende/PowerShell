@@ -1,0 +1,20 @@
+$CollectionName = "test2"
+$ComputersList = Get-Content "C:\Temp\PCs.txt" | ? { $_.Trim() } | % { $_.Trim() } | Sort-Object -Unique
+Import-Module ($Env:SMS_ADMIN_UI_PATH.Substring(0,$Env:SMS_ADMIN_UI_PATH.Length-5) + '\ConfigurationManager.psd1')
+cd LAB:
+
+foreach ($Comp in $ComputersList) {
+  $Device = Get-CMDevice -Name $Comp
+  if ($Device) {
+    $exists = Get-CMDeviceCollectionDirectMembershipRule -CollectionName $CollectionName |
+              ? { $_.ResourceID -eq $Device.ResourceID }
+    if (-not $exists) {
+      Add-CMDeviceCollectionDirectMembershipRule -CollectionName $CollectionName -ResourceId $Device.ResourceId
+      Write-Host "Adicionado: $Comp"
+    } else {
+      Write-Host "Já estava na collection: $Comp" -ForegroundColor Yellow
+    }
+  } else {
+    Write-Host "Não encontrado no SCCM: $Comp" -ForegroundColor Red
+  }
+}

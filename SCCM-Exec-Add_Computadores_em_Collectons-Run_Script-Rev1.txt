@@ -1,0 +1,97 @@
+# --- preencha só aqui em cima ---
+$SiteCode       = 'LAB'              # seu site code
+$CollectionName = 'ZOOM-Servers'     # nome da collection
+$Servers        = @('server1','server2','server3')  # << troque pelos hostnames
+# --------------------------------
+
+$ns = "root\SMS\site_$SiteCode"
+
+# pega a collection
+$col = Get-CimInstance -Namespace $ns -Query "SELECT CollectionID,Name FROM SMS_Collection WHERE Name='$CollectionName'"
+if (-not $col) { throw "Collection '$CollectionName' não existe." }
+
+$added=0;$skip=0;$nf=0
+
+foreach ($n in $Servers) {
+  $name = $n.Trim()
+  if (-not $name) { continue }
+
+  # acha o device no SCCM
+  $dev = Get-CimInstance -Namespace $ns -Query "SELECT ResourceID,Name FROM SMS_R_System WHERE UPPER(Name)='$( $name.ToUpper() )'"
+  if (-not $dev) { Write-Output "Não encontrado: $name"; $nf++; continue }
+
+  # já é membro?
+  $exists = Get-CimInstance -Namespace $ns -Query "SELECT ResourceID FROM SMS_FullCollectionMembership WHERE CollectionID='$($col.CollectionID)' AND ResourceID=$($dev.ResourceID)"
+  if ($exists) { Write-Output "Já é membro: $name"; $skip++; continue }
+
+  # adiciona como Direct Rule
+  $rule = New-CimInstance -Namespace $ns -ClassName SMS_CollectionRuleDirect -Property @{
+    ResourceClassName = 'SMS_R_System'
+    ResourceID        = [int]$dev.ResourceID
+  } -ClientOnly
+
+  Invoke-CimMethod -InputObject $col -MethodName AddMembershipRule -Arguments @{ collectionRule = $rule } | Out-Null
+  Write-Output "Adicionado: $name"; $added++
+}
+
+# força update da collection
+Invoke-CimMethod -InputObject $col -MethodName RequestRefresh | Out-Null
+"Resumo -> Adicionados: $added | Já existiam: $skip | Não encontrados: $nf"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# --- preencha só aqui em cima ---
+$SiteCode       = 'LAB'              # seu site code
+$CollectionName = 'ZOOM-Servers'     # nome da collection
+$Servers        = @('server1','server2','server3')  # << troque pelos hostnames
+# --------------------------------
+
+$ns = "root\SMS\site_$SiteCode"
+
+# pega a collection
+$col = Get-CimInstance -Namespace $ns -Query "SELECT CollectionID,Name FROM SMS_Collection WHERE Name='$CollectionName'"
+if (-not $col) { throw "Collection '$CollectionName' não existe." }
+
+$added=0;$skip=0;$nf=0
+
+foreach ($n in $Servers) {
+  $name = $n.Trim()
+  if (-not $name) { continue }
+
+  # acha o device no SCCM
+  $dev = Get-CimInstance -Namespace $ns -Query "SELECT ResourceID,Name FROM SMS_R_System WHERE UPPER(Name)='$( $name.ToUpper() )'"
+  if (-not $dev) { Write-Output "Não encontrado: $name"; $nf++; continue }
+
+  # já é membro?
+  $exists = Get-CimInstance -Namespace $ns -Query "SELECT ResourceID FROM SMS_FullCollectionMembership WHERE CollectionID='$($col.CollectionID)' AND ResourceID=$($dev.ResourceID)"
+  if ($exists) { Write-Output "Já é membro: $name"; $skip++; continue }
+
+  # adiciona como Direct Rule
+  $rule = New-CimInstance -Namespace $ns -ClassName SMS_CollectionRuleDirect -Property @{
+    ResourceClassName = 'SMS_R_System'
+    ResourceID        = [int]$dev.ResourceID
+  } -ClientOnly
+
+  Invoke-CimMethod -InputObject $col -MethodName AddMembershipRule -Arguments @{ collectionRule = $rule } | Out-Null
+  Write-Output "Adicionado: $name"; $added++
+}
+
+# força update da collection
+Invoke-CimMethod -InputObject $col -MethodName RequestRefresh | Out-Null
+"Resumo -> Adicionados: $added | Já existiam: $skip | Não encontrados: $nf"
+
