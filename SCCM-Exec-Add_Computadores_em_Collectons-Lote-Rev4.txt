@@ -1,7 +1,11 @@
 $CollectionName = "test3"
 $ListPath = "C:\temp\srvsz\srvsz.txt"
 
-if (Get-PSDrive -Name LAB -ErrorAction SilentlyContinue) { cd LAB: }
+if (-not (Get-Module ConfigurationManager -ListAvailable | Where-Object { $_ })) { Import-Module "$env:SMS_ADMIN_UI_PATH\..\ConfigurationManager.psd1" -ErrorAction Stop }
+$cmDrive = Get-PSDrive -PSProvider CMSite | Select-Object -First 1
+if ($cmDrive) { Set-Location "$($cmDrive.Name):" } else { Write-Host "ConfigMgr site drive not found."; exit 1 }
+
+if (-not (Test-Path -LiteralPath $ListPath)) { Write-Host "List file not found: $ListPath"; exit 1 }
 
 $col = Get-CMDeviceCollection | Where-Object { $_.Name -eq $CollectionName }
 if (-not $col) { Write-Host "Collection '$CollectionName' not found."; exit 1 }
@@ -13,16 +17,22 @@ $existingIds = @()
 $rules = Get-CMDeviceCollectionDirectMembershipRule -CollectionId $col.CollectionID -ErrorAction SilentlyContinue
 if ($rules) { $existingIds = $rules | Where-Object { $_.ResourceClassName -eq 'SMS_R_System' } | Select-Object -Expand ResourceID }
 
-$added=0; $skipped=0; $notfound=0
+$added=0; $skipped=0; $notfound=0; $ambiguous=0
 foreach ($n in $names) {
-    $dev = Get-CMDevice -Name $n
-    if (-not $dev) { Write-Host "Not found in SCCM: $n"; $notfound++; continue }
+    $devs = Get-CMDevice -Name $n -Fast | Where-Object { $_.Name -ieq $n }
+    if (-not $devs) { Write-Host "Not found in SCCM: $n"; $notfound++; continue }
+    if ($devs.Count -gt 1) { Write-Host "Ambiguous name (multiple devices): $n"; $ambiguous++; continue }
+    $dev = $devs | Select-Object -First 1
     if ($existingIds -contains $dev.ResourceID) { Write-Host "Already in collection: $n"; $skipped++; continue }
-    Add-CMDeviceCollectionDirectMembershipRule -CollectionId $col.CollectionID -ResourceID $dev.ResourceID -ErrorAction Stop
-    Write-Host "Added: $n"
-    $added++
-    $existingIds += $dev.ResourceID
+    try {
+        Add-CMDeviceCollectionDirectMembershipRule -CollectionId $col.CollectionID -ResourceID $dev.ResourceID -ErrorAction Stop
+        Write-Host "Added: $n"
+        $added++
+        $existingIds += $dev.ResourceID
+    } catch {
+        Write-Host "Failed to add: $n -> $($_.Exception.Message)"
+    }
 }
 
-Invoke-CMCollectionUpdate -Id $col.CollectionID | Out-Null
-Write-Host "`nSummary -> Added: $added | Already present: $skipped | Not found: $notfound"
+Invoke-CMCollectionUpdate -CollectionId $col.CollectionID | Out-Null
+Write-Host "`nSummary -> Added: $added | Already present: $skipped | Not found: $notfound | Ambiguous: $ambiguous"
