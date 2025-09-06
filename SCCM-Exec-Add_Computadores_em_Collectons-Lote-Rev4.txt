@@ -1,0 +1,28 @@
+$CollectionName = "test3"
+$ListPath = "C:\temp\srvsz\srvsz.txt"
+
+if (Get-PSDrive -Name LAB -ErrorAction SilentlyContinue) { cd LAB: }
+
+$col = Get-CMDeviceCollection | Where-Object { $_.Name -eq $CollectionName }
+if (-not $col) { Write-Host "Collection '$CollectionName' not found."; exit 1 }
+if (@($col).Count -ne 1) { Write-Host "More than one collection named '$CollectionName'."; exit 1 }
+
+$names = Get-Content -LiteralPath $ListPath | ForEach-Object { $_.Trim() } | Where-Object { $_ } | Sort-Object -Unique
+
+$existingIds = @()
+$rules = Get-CMDeviceCollectionDirectMembershipRule -CollectionId $col.CollectionID -ErrorAction SilentlyContinue
+if ($rules) { $existingIds = $rules | Where-Object { $_.ResourceClassName -eq 'SMS_R_System' } | Select-Object -Expand ResourceID }
+
+$added=0; $skipped=0; $notfound=0
+foreach ($n in $names) {
+    $dev = Get-CMDevice -Name $n
+    if (-not $dev) { Write-Host "Not found in SCCM: $n"; $notfound++; continue }
+    if ($existingIds -contains $dev.ResourceID) { Write-Host "Already in collection: $n"; $skipped++; continue }
+    Add-CMDeviceCollectionDirectMembershipRule -CollectionId $col.CollectionID -ResourceID $dev.ResourceID -ErrorAction Stop
+    Write-Host "Added: $n"
+    $added++
+    $existingIds += $dev.ResourceID
+}
+
+Invoke-CMCollectionUpdate -Id $col.CollectionID | Out-Null
+Write-Host "`nSummary -> Added: $added | Already present: $skipped | Not found: $notfound"
