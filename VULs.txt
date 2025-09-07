@@ -39,4 +39,29 @@ Mapa rápido dos valores (só pra você interpretar o que o scanner pede):
 
 0x00802048 → HT desligado, com BHI
 
+
+
+/--------------------------------------- Correção 01
+Criar o primeiro valor (FeatureSettingsOverride)
+
+Painel da direita (área vazia) → botão direito → New → DWORD (32-bit) Value.
+
+Nomeie exatamente: FeatureSettingsOverride → Enter.
+
+Dê duplo clique nele:
+
+Em Base, escolha Hexadecimal e digite 00802048 (sem 0x).
+(ou escolha Decimal e digite 8396872)
+
+OK.
+
+Criar o segundo valor (FeatureSettingsOverrideMask)
+
+Botão direito (área vazia) → New → DWORD (32-bit) Value.
+
+Nome: FeatureSettingsOverrideMask → Enter.
+
+Duplo clique → Base: Decimal → Value data: 3. (Se preferir Hexadecimal: 00000003) → OK.
+/---------------------------------------
+
 ###########################################  Windows Speculative Execution Configuration } #############################
