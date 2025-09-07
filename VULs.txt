@@ -1,23 +1,32 @@
 ###########################################  { Windows Speculative Execution Configuration #############################
 
-como seguir sem pressa
+caminho fácil (e seguro) só pra ver — zero mudança
 
-Se quiser, a gente faz assim, passo a passo:
-
-Verificar se o HT está ligado (PowerShell admin):
+Ver HT (Hyper-Threading)
 
 Get-CimInstance Win32_Processor | Select NumberOfCores, NumberOfLogicalProcessors
 
 
-– se LogicalProcessors > Cores, o HT está ligado.
+→ se LogicalProcessors > NumberOfCores, o HT está ligado.
 
-Checar o estado das mitigações:
+Ver o que já está setado
 
-Install-Module SpeculationControl -Scope CurrentUser
-Import-Module SpeculationControl
-Get-SpeculationControlSettings
+reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" ^
+ /v FeatureSettingsOverride & ^
+reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" ^
+ /v FeatureSettingsOverrideMask
 
 
-– isso mostra o que já está ativo (inclui a linha de BHI/BHB).
+(se não existir, significa “padrão do Windows”.)
+
+Mapa rápido dos valores (só pra você interpretar o que o scanner pede):
+
+0x00000048 → HT ligado, sem BHI
+
+0x00002048 → HT desligado, sem BHI
+
+0x00800048 → HT ligado, com BHI
+
+0x00802048 → HT desligado, com BHI
 
 ###########################################  Windows Speculative Execution Configuration } #############################
