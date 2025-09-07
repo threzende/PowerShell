@@ -1,0 +1,23 @@
+###########################################  { Windows Speculative Execution Configuration #############################
+
+como seguir sem pressa
+
+Se quiser, a gente faz assim, passo a passo:
+
+Verificar se o HT está ligado (PowerShell admin):
+
+Get-CimInstance Win32_Processor | Select NumberOfCores, NumberOfLogicalProcessors
+
+
+– se LogicalProcessors > Cores, o HT está ligado.
+
+Checar o estado das mitigações:
+
+Install-Module SpeculationControl -Scope CurrentUser
+Import-Module SpeculationControl
+Get-SpeculationControlSettings
+
+
+– isso mostra o que já está ativo (inclui a linha de BHI/BHB).
+
+###########################################  Windows Speculative Execution Configuration } #############################
