@@ -11,10 +11,20 @@ Get-CimInstance Win32_Processor | Select NumberOfCores, NumberOfLogicalProcessor
 
 Ver o que já está setado
 
-reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" ^
- /v FeatureSettingsOverride & ^
-reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" ^
- /v FeatureSettingsOverrideMask
+Se estiver no CMD (Prompt de Comando)
+
+Mais fácil (2 linhas, uma de cada vez):
+
+reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v FeatureSettingsOverride
+reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v FeatureSettingsOverrideMask
+
+
+Tudo em 1 linha (executa as duas consultas):
+
+reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v FeatureSettingsOverride & reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v FeatureSettingsOverrideMask
+
+
+Aquele ^ que eu tinha colocado é só “quebra de linha” no CMD para ficar legível; não é obrigatório. Pode ignorar e usar as versões acima.
 
 
 (se não existir, significa “padrão do Windows”.)
