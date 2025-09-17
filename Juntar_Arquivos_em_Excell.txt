@@ -1,0 +1,234 @@
+[CmdletBinding()]
+param(
+  [string]$SourceDir = 'C:\temp\PageFileInfo'
+)
+
+if (!(Test-Path -LiteralPath $SourceDir)) { New-Item -Path $SourceDir -ItemType Directory -Force | Out-Null }
+
+# ===== Exportador XLS (SpreadsheetML 2003) =====
+function Export-ExcelXml {
+  param([Parameter(Mandatory)][string]$Path,[Parameter(Mandatory)][hashtable]$Sheets)
+  $sb = New-Object System.Text.StringBuilder
+  $append = { param($t); [void]$sb.AppendLine($t) }
+  $esc = { param($v) if ($null -eq $v) { '' } else { [System.Security.SecurityElement]::Escape([string]$v) } }
+  $isNum = { param($v) ($v -is [int]) -or ($v -is [long]) -or ($v -is [double]) -or ($v -is [decimal]) }
+  & $append '<?xml version="1.0"?>'
+  & $append '<?mso-application progid="Excel.Sheet"?>'
+  & $append '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">'
+  & $append '  <Styles>'
+  & $append '    <Style ss:ID="Header"><Font ss:Bold="1"/><Interior ss:Color="#F2F2F2" ss:Pattern="Solid"/></Style>'
+  & $append '    <Style ss:ID="DefaultNumber"><NumberFormat ss:Format="General"/></Style>'
+  & $append '  </Styles>'
+  foreach ($sheetName in $Sheets.Keys) {
+    $rows = @($Sheets[$sheetName]); if (-not $rows) { $rows = @() }
+    $props = @(); if ($rows.Count -gt 0) { $props = $rows[0].PSObject.Properties.Name } else { $props = @('Vazio') }
+    & $append ("  <Worksheet ss:Name=""$((& $esc $sheetName))"">")
+    & $append '    <Table>'
+    & $append '      <Row>'
+    foreach ($p in $props) { & $append ("        <Cell ss:StyleID=""Header""><Data ss:Type=""String"">$((& $esc $p))</Data></Cell>") }
+    & $append '      </Row>'
+    foreach ($r in $rows) {
+      & $append '      <Row>'
+      foreach ($p in $props) {
+        $val = $null; if ($r -and $r.PSObject.Properties[$p]) { $val = $r.$p }
+        if (& $isNum $val) { & $append ("        <Cell ss:StyleID=""DefaultNumber""><Data ss:Type=""Number"">$val</Data></Cell>") }
+        else { & $append ("        <Cell><Data ss:Type=""String"">$((& $esc $val))</Data></Cell>") }
+      }
+      & $append '      </Row>'
+    }
+    & $append '    </Table>'
+    & $append '  </Worksheet>'
+  }
+  & $append '</Workbook>'
+  [System.IO.File]::WriteAllText($Path, $sb.ToString(), [System.Text.Encoding]::UTF8)
+}
+
+# ===== Helpers comuns =====
+function Parse-Number {
+  param([string]$s)
+  if ([string]::IsNullOrWhiteSpace($s)) { return $null }
+  try { return [double]::Parse($s, [System.Globalization.CultureInfo]::InvariantCulture) } catch {
+    try { return [double]::Parse($s, [System.Globalization.CultureInfo]::GetCultureInfo('pt-BR')) } catch { return $null }
+  }
+}
+function To-Obj {
+  param($name,$free,$max,$toup,$wu)
+  [pscustomobject]@{
+    'Name'                         = $name
+    'Free Space in C drive in GBs' = [double]$free
+    'Max Mem (RAM x3)'             = [double]$max
+    'To UP (MaxMem - Free C)'      = [double]$toup
+    'Windows Update (To UP + 20)'  = [double]$wu
+  }
+}
+
+# ===== Leitor XLS (SpreadsheetML 2003) =====
+function Get-SizingRowFromXlsXml {
+  param([string]$Path)
+  try {
+    $doc = New-Object System.Xml.XmlDocument
+    $doc.Load($Path)
+    $ns = New-Object System.Xml.XmlNamespaceManager($doc.NameTable)
+    $ns.AddNamespace('d','urn:schemas-microsoft-com:office:spreadsheet')
+    $ns.AddNamespace('ss','urn:schemas-microsoft-com:office:spreadsheet')
+    $ws = $doc.SelectSingleNode('//d:Worksheet[@ss:Name="Sizing"]', $ns)
+    if (-not $ws) { return $null }
+    $rows = $ws.SelectNodes('d:Table/d:Row', $ns)
+    if ($rows.Count -lt 2) { return $null }
+    $h = @(); foreach ($c in $rows[0].SelectNodes('d:Cell/d:Data',$ns)) { $h += $c.InnerText }
+    $v = @(); foreach ($c in $rows[1].SelectNodes('d:Cell/d:Data',$ns)) { $v += $c.InnerText }
+    $map = @{}; for ($i=0; $i -lt $h.Count; $i++) { if ($h[$i]) { $map[$h[$i]] = $(if ($i -lt $v.Count) { $v[$i] } else { $null }) } }
+    return To-Obj $map['Name'] (Parse-Number $map['Free Space in C drive in GBs']) (Parse-Number $map['Max Mem (RAM x3)']) (Parse-Number $map['To UP (MaxMem - Free C)']) (Parse-Number $map['Windows Update (To UP + 20)'])
+  } catch { return $null }
+}
+
+# ===== Leitor XLSX (OpenXML) via Zip =====
+Add-Type -AssemblyName System.IO.Compression | Out-Null
+Add-Type -AssemblyName System.IO.Compression.FileSystem | Out-Null
+function Get-ColIndex {
+  param([string]$cellRef)
+  if (-not $cellRef) { return 0 }
+  $m = [regex]::Match($cellRef,'^[A-Z]+'); if (-not $m.Success) { return 0 }
+  $letters = $m.Value.ToCharArray()
+  $n = 0
+  foreach ($ch in $letters) { $n = $n * 26 + ([int][byte]$ch - [int][byte]'A' + 1) }
+  return ($n - 1) # zero-based
+}
+function Read-XlsxRow {
+  param($rowNode,$ns,$shared)
+  $cells = @()
+  foreach ($c in $rowNode.SelectNodes('d:c',$ns)) {
+    $ci = Get-ColIndex ($c.GetAttribute('r'))
+    $t  = $c.GetAttribute('t')
+    $v  = $c.SelectSingleNode('d:v',$ns)
+    $val = $null
+    if ($t -eq 's' -and $v) {
+      $idx = [int]$v.InnerText
+      if ($shared -and $idx -lt $shared.Count) { $val = $shared[$idx] } else { $val = $v.InnerText }
+    } elseif ($t -eq 'inlineStr') {
+      $tNode = $c.SelectSingleNode('d:is/d:t',$ns); if ($tNode) { $val = $tNode.InnerText }
+    } else {
+      if ($v) { $val = $v.InnerText } else { $val = '' }
+    }
+    $cells[$ci] = $val
+  }
+  return ,$cells
+}
+function Get-SizingRowFromXlsx {
+  param([string]$Path)
+  try {
+    $zip = [System.IO.Compression.ZipFile]::OpenRead($Path)
+    try {
+      $wbE   = $zip.GetEntry('xl/workbook.xml'); if (-not $wbE) { return $null }
+      $relsE = $zip.GetEntry('xl/_rels/workbook.xml.rels')
+      $ssE   = $zip.GetEntry('xl/sharedStrings.xml')
+
+      $wb = New-Object System.Xml.XmlDocument
+      $ns = New-Object System.Xml.XmlNamespaceManager($wb.NameTable)
+      $ns.AddNamespace('d','http://schemas.openxmlformats.org/spreadsheetml/2006/main')
+      $ns.AddNamespace('r','http://schemas.openxmlformats.org/officeDocument/2006/relationships')
+      $s = $wb.CreateNavigator()
+      $sr = New-Object System.IO.StreamReader($wbE.Open())
+      $wb.LoadXml($sr.ReadToEnd()); $sr.Close()
+
+      $sheetNode = $wb.SelectSingleNode('//d:sheets/d:sheet[@name="Sizing"]',$ns)
+      if (-not $sheetNode) { return $null }
+      $rid = $sheetNode.Attributes.GetNamedItem('id',$ns.LookupNamespace('r')).Value
+
+      $rels = New-Object System.Xml.XmlDocument
+      if ($relsE) {
+        $sr2 = New-Object System.IO.StreamReader($relsE.Open())
+        $rels.LoadXml($sr2.ReadToEnd()); $sr2.Close()
+      } else { return $null }
+
+      $nsR = New-Object System.Xml.XmlNamespaceManager($rels.NameTable)
+      $nsR.AddNamespace('rel','http://schemas.openxmlformats.org/package/2006/relationships')
+      $relNode = $rels.SelectSingleNode("//rel:Relationship[@Id='$rid']",$nsR)
+      if (-not $relNode) { return $null }
+      $target = $relNode.Attributes['Target'].Value
+      if (-not $target.StartsWith('xl/')) { $target = 'xl/' + $target }
+
+      $sheetE = $zip.GetEntry($target); if (-not $sheetE) { return $null }
+      $sheetDoc = New-Object System.Xml.XmlDocument
+      $sr3 = New-Object System.IO.StreamReader($sheetE.Open())
+      $sheetDoc.LoadXml($sr3.ReadToEnd()); $sr3.Close()
+      $nsS = New-Object System.Xml.XmlNamespaceManager($sheetDoc.NameTable)
+      $nsS.AddNamespace('d','http://schemas.openxmlformats.org/spreadsheetml/2006/main')
+
+      $shared = @()
+      if ($ssE) {
+        $ssDoc = New-Object System.Xml.XmlDocument
+        $sr4 = New-Object System.IO.StreamReader($ssE.Open())
+        $ssDoc.LoadXml($sr4.ReadToEnd()); $sr4.Close()
+        $nsSS = New-Object System.Xml.XmlNamespaceManager($ssDoc.NameTable)
+        $nsSS.AddNamespace('d','http://schemas.openxmlformats.org/spreadsheetml/2006/main')
+        foreach ($si in $ssDoc.SelectNodes('//d:si',$nsSS)) {
+          $texts = $si.SelectNodes('.//d:t',$nsSS) | ForEach-Object { $_.InnerText }
+          $shared += ($texts -join '')
+        }
+      }
+
+      $rows = $sheetDoc.SelectNodes('//d:sheetData/d:row',$nsS)
+      if ($rows.Count -lt 2) { return $null }
+      $hdr = Read-XlsxRow -rowNode $rows[0] -ns $nsS -shared $shared
+      $val = Read-XlsxRow -rowNode $rows[1] -ns $nsS -shared $shared
+
+      $h = $hdr
+      $v = $val
+      $map = @{}
+      for ($i=0; $i -lt $h.Count; $i++) { if ($h[$i]) { $map[$h[$i]] = $(if ($i -lt $v.Count) { $v[$i] } else { $null }) } }
+
+      return To-Obj $map['Name'] (Parse-Number $map['Free Space in C drive in GBs']) (Parse-Number $map['Max Mem (RAM x3)']) (Parse-Number $map['To UP (MaxMem - Free C)']) (Parse-Number $map['Windows Update (To UP + 20)'])
+    } finally { $zip.Dispose() }
+  } catch { return $null }
+}
+
+# ===== Leitor via Excel COM (se disponível) =====
+function Get-SizingRowFromExcelCom {
+  param([string]$Path)
+  try {
+    $xl = New-Object -ComObject Excel.Application
+  } catch { return $null }
+  try {
+    $xl.Visible = $false
+    $wb = $xl.Workbooks.Open($Path, $null, $true)
+    $sh = $null
+    foreach ($ws in $wb.Worksheets) { if ($ws.Name -eq 'Sizing') { $sh = $ws; break } }
+    if (-not $sh) { $wb.Close($false); return $null }
+    $h = @(); $v = @()
+    for ($i=1; $i -le 10; $i++) { $h += [string]$sh.Cells.Item(1,$i).Text }
+    for ($i=1; $i -le 10; $i++) { $v += [string]$sh.Cells.Item(2,$i).Text }
+    $wb.Close($false)
+    $xl.Quit()
+    [System.Runtime.Interopservices.Marshal]::ReleaseComObject($xl) | Out-Null
+    $map = @{}; for ($i=0; $i -lt $h.Count; $i++) { if ($h[$i]) { $map[$h[$i]] = $v[$i] } }
+    return To-Obj $map['Name'] (Parse-Number $map['Free Space in C drive in GBs']) (Parse-Number $map['Max Mem (RAM x3)']) (Parse-Number $map['To UP (MaxMem - Free C)']) (Parse-Number $map['Windows Update (To UP + 20)'])
+  } catch {
+    try { $xl.Quit() } catch {}
+    return $null
+  }
+}
+
+# ===== Varredura e unificação =====
+$files = Get-ChildItem -LiteralPath $SourceDir -Include 'PageFileInfo*.xls','PageFileInfo*.xlsx' -File -ErrorAction SilentlyContinue
+
+$rows = foreach ($f in $files) {
+  $r = $null
+  $r = Get-SizingRowFromExcelCom -Path $f.FullName
+  if (-not $r) {
+    if ($f.Extension -ieq '.xls')   { $r = Get-SizingRowFromXlsXml  -Path $f.FullName }
+    elseif ($f.Extension -ieq '.xlsx') { $r = Get-SizingRowFromXlsx    -Path $f.FullName }
+  }
+  if ($r -and $r.Name) {
+    $r | Add-Member -NotePropertyName SourceFile -NotePropertyValue $f.Name
+    $r | Add-Member -NotePropertyName Modified   -NotePropertyValue $f.LastWriteTime
+    $r
+  }
+}
+
+$latest = $rows | Group-Object Name | ForEach-Object { $_.Group | Sort-Object Modified -Descending | Select-Object -First 1 }
+$final  = $latest | Sort-Object Name | Select-Object 'Name','Free Space in C drive in GBs','Max Mem (RAM x3)','To UP (MaxMem - Free C)','Windows Update (To UP + 20)'
+
+$outXls = Join-Path $SourceDir 'PageFile_Universal.xls'
+Export-ExcelXml -Path $outXls -Sheets @{ 'Universal' = $final }
+Write-Host "Gerado: $outXls (linhas: $($final.Count))"
