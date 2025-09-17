@@ -1,0 +1,166 @@
+[CmdletBinding()]
+param()
+
+$destDir = 'C:\temp\PageFileInfo'
+if (!(Test-Path -LiteralPath $destDir)) { New-Item -Path $destDir -ItemType Directory -Force | Out-Null }
+$outFile = Join-Path $destDir ("PageFileInfo{0}.txt" -f $env:COMPUTERNAME)
+
+$culture = [System.Globalization.CultureInfo]::InvariantCulture
+$now = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+
+function Format-MB-GB([int]$mb) {
+    $gb = [double]($mb/1KB)
+    [string]::Format([System.Globalization.CultureInfo]::InvariantCulture, "{0} MB ({1:0.00} GB)", $mb, $gb)
+}
+
+try {
+    $bytes = (Get-CimInstance Win32_PhysicalMemory -ErrorAction Stop | Measure-Object Capacity -Sum).Sum
+    if (-not $bytes) { $bytes = (Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory }
+} catch {
+    $bytes = (Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory
+}
+$ramMB = [int][math]::Round($bytes/1MB)
+$minMB = [int]([math]::Round($ramMB * 1.5))
+$maxMB = [int]([math]::Round($ramMB * 3))
+
+$cs = Get-CimInstance Win32_ComputerSystem
+$auto = [bool]$cs.AutomaticManagedPagefile
+
+$disks = Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3"
+
+function Get-DiskInfoForDrive([string]$drive) {
+    try {
+        $part = Get-CimInstance -Query "ASSOCIATORS OF {Win32_LogicalDisk.DeviceID='$drive'} WHERE AssocClass = Win32_LogicalDiskToPartition" | Select-Object -First 1
+        if ($part) {
+            $dd = Get-CimInstance -Query "ASSOCIATORS OF {Win32_DiskPartition.DeviceID='$($part.DeviceID)'} WHERE AssocClass = Win32_DiskDriveToDiskPartition" | Select-Object -First 1
+            if ($dd) { return [pscustomobject]@{ Index = $dd.Index; Model = $dd.Model } }
+        }
+    } catch {}
+    [pscustomobject]@{ Index = $null; Model = $null }
+}
+
+$pfUsage = Get-CimInstance Win32_PageFileUsage -ErrorAction SilentlyContinue
+$pfSettings = Get-CimInstance Win32_PageFileSetting -ErrorAction SilentlyContinue
+
+$pfUsageByPath = @{}
+if ($pfUsage) { foreach ($u in $pfUsage) { $pfUsageByPath[$u.Name] = $u } }
+$pfSettingsByPath = @{}
+if ($pfSettings) { foreach ($s in $pfSettings) { $pfSettingsByPath[$s.Name] = $s } }
+
+$totalAllocatedMB = [int](($pfUsage | Measure-Object AllocatedBaseSize -Sum).Sum)
+if (-not $totalAllocatedMB) { $totalAllocatedMB = 0 }
+
+$lines = @()
+$lines += "Pagefile Report - $now"
+$lines += ("System mode: {0}" -f ($(if ($auto) { "Automatic (Windows-managed)" } else { "Manual" })))
+$lines += ""
+$lines += "Total paging file size (all drives):"
+$lines += ("  Minimum allowed           : {0}" -f (Format-MB-GB 16))
+$lines += ("  Currently allocated       : {0}" -f (Format-MB-GB $totalAllocatedMB))
+$lines += ""
+
+$lines += "Per-drive layout:"
+$fmt = '{0,-6} {1,-18} {2,5} {3,-35} {4,-30} {5,14} {6,16} {7,12} {8,8} {9,8}'
+$lines += ($fmt -f 'Drive','Mode','Disk#','DiskModel','Path','CurrentSizeMB','CurrentUsageMB','PeakUsageMB','MinMB','MaxMB').TrimEnd()
+$paths = @()
+if ($pfUsage) { $paths += $pfUsage | Select-Object -Expand Name }
+if ($pfSettings) { $paths += $pfSettings | Select-Object -Expand Name }
+$paths = $paths | Select-Object -Unique | Sort-Object
+if (-not $paths) { $paths = @() }
+
+foreach ($d in $disks | Sort-Object DeviceID) {
+    $drive = $d.DeviceID
+    $di = Get-DiskInfoForDrive -drive $drive
+    $diskIndex = if ($di.Index -ne $null) { $di.Index } else { '' }
+    $diskModelTrunc = if ($di.Model) { if ($di.Model.Length -gt 35) { $di.Model.Substring(0,35) } else { $di.Model } } else { '' }
+    $pathMatch = $paths | Where-Object { $_ -like "$drive\*" }
+    if (-not $pathMatch) {
+        $lines += ($fmt -f $drive,"None",$diskIndex,$diskModelTrunc,'','','','','','').TrimEnd()
+    } else {
+        foreach ($p in $pathMatch) {
+            $u = $pfUsageByPath[$p]
+            $s = $pfSettingsByPath[$p]
+            $mode = if ($auto -and $u) { "System-managed" } elseif ($s) { "Manual" } else { "Unknown" }
+            $currSize = if ($u) { [int]$u.AllocatedBaseSize } else { '' }
+            $currUse  = if ($u) { [int]$u.CurrentUsage } else { '' }
+            $peakUse  = if ($u) { [int]$u.PeakUsage } else { '' }
+            $minConf  = if ($s) { [int]$s.InitialSize } else { '' }
+            $maxConf  = if ($s) { [int]$s.MaximumSize } else { '' }
+            $lines += ($fmt -f $drive,$mode,$diskIndex,$diskModelTrunc,$p,$currSize,$currUse,$peakUse,$minConf,$maxConf).TrimEnd()
+        }
+    }
+}
+$lines += ""
+
+$lines += "Fixed drives:"
+$fmtDisk = '{0,-6} {1,12} {2,12} {3,8}'
+$lines += ($fmtDisk -f 'Drive','Size_GB','Free_GB','Free_%').TrimEnd()
+foreach ($d in $disks | Sort-Object DeviceID) {
+    $sizeGB = ($d.Size/1GB)
+    $freeGB = ($d.FreeSpace/1GB)
+    $freePct = if ($d.Size) { ($d.FreeSpace / $d.Size * 100) } else { 0 }
+    $lines += ($fmtDisk -f $d.DeviceID,
+        [string]::Format($culture,'{0:0.00}',$sizeGB),
+        [string]::Format($culture,'{0:0.00}',$freeGB),
+        [string]::Format($culture,'{0:0.00}',$freePct)
+    ).TrimEnd()
+}
+$lines += ""
+
+$lines += "Memory:"
+$lines += ("  Installed RAM            : {0}" -f (Format-MB-GB $ramMB))
+$lines += ""
+
+$lines += "Suggested sizing:"
+$lines += ("  Min (1.5x RAM)           : {0}" -f (Format-MB-GB $minMB))
+$lines += ("  Max (3.0x RAM)           : {0}" -f (Format-MB-GB $maxMB))
+$lines += ""
+
+function Add-SummaryBlock([string]$title, [double]$freeGB, [double]$minGB, [double]$maxGB) {
+    $growthToMaxGB = [double]([math]::Max(0, $maxGB - $freeGB))
+    $wuReserveGB = 20.0
+    $totalGrowthGB = [double]([math]::Max(0, ($maxGB + $wuReserveGB) - $freeGB))
+    $supported = ($freeGB -ge ($maxGB + $wuReserveGB))
+    $blk = @()
+    $blk += $title
+    $blk += ("  Free now                  : {0:0.00} GB" -f $freeGB)
+    $blk += ("  Required Min (1.5x RAM)   : {0:0.00} GB" -f $minGB)
+    $blk += ("  Required Max (3.0x RAM)   : {0:0.00} GB" -f $maxGB)
+    $blk += ("  Growth to reach Max       : {0:0.00} GB" -f $growthToMaxGB)
+    $blk += ("  Windows Update reserve    : {0:0.00} GB" -f $wuReserveGB)
+    $blk += ("  Total growth (Max + 20GB) : {0:0.00} GB" -f $totalGrowthGB)
+    $blk += ("  Supported now             : {0}" -f ($(if ($supported) { "YES" } else { "NO" })))
+    return $blk
+}
+
+$pfDrives = @()
+if ($paths) {
+    $pfDrives = ($paths | ForEach-Object { ($_ -replace '^([A-Za-z]):\\.*','$1:').ToUpper() }) | Select-Object -Unique | Sort-Object
+}
+
+if ($pfDrives.Count -gt 0) {
+    $lines += "Pagefile drive summary:"
+    foreach ($drv in $pfDrives) {
+        $d = $disks | Where-Object { $_.DeviceID -ieq $drv }
+        if (-not $d) { continue }
+        $freeGB = [double]($d.FreeSpace/1GB)
+        $lines += Add-SummaryBlock ("  Drive $drv:"), $freeGB, ($minMB/1KB), ($maxMB/1KB)
+    }
+}
+
+$alts = @('D:','E:')
+$existingAlt = $disks | Where-Object { $alts -contains $_.DeviceID } | Sort-Object DeviceID
+if ($existingAlt.Count -gt 0) {
+    $lines += ""
+    $lines += "Alternative drive check:"
+    foreach ($d in $existingAlt) {
+        $freeGB = [double]($d.FreeSpace/1GB)
+        $lines += Add-SummaryBlock ("  Drive $($d.DeviceID):"), $freeGB, ($minMB/1KB), ($maxMB/1KB)
+    }
+} else {
+    $lines += ""
+    $lines += "Alternative drive check:"
+    $lines += "  No D: or E: fixed drive found."
+}
+
+Set-Content -LiteralPath $outFile -Value $lines -Encoding UTF8
