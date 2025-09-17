@@ -116,48 +116,64 @@ $lines += ("  Min (1.5x RAM)           : {0}" -f (Format-MB-GB $minMB))
 $lines += ("  Max (3.0x RAM)           : {0}" -f (Format-MB-GB $maxMB))
 $lines += ""
 
-function Add-SummaryBlock([string]$title, [double]$freeGB, [double]$minGB, [double]$maxGB) {
-    $growthToMaxGB = [double]([math]::Max(0, $maxGB - $freeGB))
-    $wuReserveGB = 20.0
-    $totalGrowthGB = [double]([math]::Max(0, ($maxGB + $wuReserveGB) - $freeGB))
-    $supported = ($freeGB -ge ($maxGB + $wuReserveGB))
-    $blk = @()
-    $blk += $title
-    $blk += ("  Free now                  : {0:0.00} GB" -f $freeGB)
-    $blk += ("  Required Min (1.5x RAM)   : {0:0.00} GB" -f $minGB)
-    $blk += ("  Required Max (3.0x RAM)   : {0:0.00} GB" -f $maxGB)
-    $blk += ("  Growth to reach Max       : {0:0.00} GB" -f $growthToMaxGB)
-    $blk += ("  Windows Update reserve    : {0:0.00} GB" -f $wuReserveGB)
-    $blk += ("  Total growth (Max + 20GB) : {0:0.00} GB" -f $totalGrowthGB)
-    $blk += ("  Supported now             : {0}" -f ($(if ($supported) { "YES" } else { "NO" })))
-    return $blk
-}
-
+# Summary for drives that currently host a pagefile
 $pfDrives = @()
 if ($paths) {
     $pfDrives = ($paths | ForEach-Object { ($_ -replace '^([A-Za-z]):\\.*','$1:').ToUpper() }) | Select-Object -Unique | Sort-Object
 }
-
 if ($pfDrives.Count -gt 0) {
     $lines += "Pagefile drive summary:"
     foreach ($drv in $pfDrives) {
         $d = $disks | Where-Object { $_.DeviceID -ieq $drv }
         if (-not $d) { continue }
         $freeGB = [double]($d.FreeSpace/1GB)
-        $lines += Add-SummaryBlock ("  Drive $drv:"), $freeGB, ($minMB/1KB), ($maxMB/1KB)
+        $allocMB = [int](($pfUsage | Where-Object { $_.Name -like "$drv*" } | Measure-Object AllocatedBaseSize -Sum).Sum)
+        if (-not $allocMB) { $allocMB = 0 }
+        $growthToMaxGB = [double]([math]::Max(0, ($maxMB - $allocMB))/1KB)
+        $reserveGB = 20.0
+        $totalGrowthGB = $growthToMaxGB + $reserveGB
+        $supported = $freeGB -ge $totalGrowthGB
+
+        $lines += ("  Drive {0}:" -f $drv)
+        $lines += ("    Free now                  : {0}" -f [string]::Format($culture,'{0:0.00} GB',$freeGB))
+        $lines += ("    Required Min (1.5x RAM)   : {0}" -f [string]::Format($culture,'{0:0.00} GB',($minMB/1KB)))
+        $lines += ("    Required Max (3.0x RAM)   : {0}" -f [string]::Format($culture,'{0:0.00} GB',($maxMB/1KB)))
+        $lines += ("    Growth to reach Max       : {0}" -f [string]::Format($culture,'{0:0.00} GB',$growthToMaxGB))
+        $lines += ("    Windows Update reserve    : {0}" -f [string]::Format($culture,'{0:0.00} GB',$reserveGB))
+        $lines += ("    Total growth (Max + 20GB) : {0}" -f [string]::Format($culture,'{0:0.00} GB',$totalGrowthGB))
+        $lines += ("    Supported now             : {0}" -f ($(if ($supported) { 'YES' } else { 'NO' })))
     }
 }
 
-$alts = @('D:','E:')
-$existingAlt = $disks | Where-Object { $alts -contains $_.DeviceID } | Sort-Object DeviceID
-if ($existingAlt.Count -gt 0) {
-    $lines += ""
-    $lines += "Alternative drive check:"
-    foreach ($d in $existingAlt) {
-        $freeGB = [double]($d.FreeSpace/1GB)
-        $lines += Add-SummaryBlock ("  Drive $($d.DeviceID):"), $freeGB, ($minMB/1KB), ($maxMB/1KB)
+# Alternative drive check (D: and E:), same logic even if no pagefile exists there
+$altList = @('D:', 'E:')
+$altFound = $false
+foreach ($alt in $altList) {
+    $d = $disks | Where-Object { $_.DeviceID -ieq $alt }
+    if (-not $d) { continue }
+    if (-not $altFound) {
+        $lines += ""
+        $lines += "Alternative drive check:"
+        $altFound = $true
     }
-} else {
+    $freeGB = [double]($d.FreeSpace/1GB)
+    $allocMB = [int](($pfUsage | Where-Object { $_.Name -like "$alt*" } | Measure-Object AllocatedBaseSize -Sum).Sum)
+    if (-not $allocMB) { $allocMB = 0 }
+    $growthToMaxGB = [double]([math]::Max(0, ($maxMB - $allocMB))/1KB)
+    $reserveGB = 20.0
+    $totalGrowthGB = $growthToMaxGB + $reserveGB
+    $supported = $freeGB -ge $totalGrowthGB
+
+    $lines += ("  Drive {0}:" -f $alt)
+    $lines += ("    Free now                  : {0}" -f [string]::Format($culture,'{0:0.00} GB',$freeGB))
+    $lines += ("    Required Min (1.5x RAM)   : {0}" -f [string]::Format($culture,'{0:0.00} GB',($minMB/1KB)))
+    $lines += ("    Required Max (3.0x RAM)   : {0}" -f [string]::Format($culture,'{0:0.00} GB',($maxMB/1KB)))
+    $lines += ("    Growth to reach Max       : {0}" -f [string]::Format($culture,'{0:0.00} GB',$growthToMaxGB))
+    $lines += ("    Windows Update reserve    : {0}" -f [string]::Format($culture,'{0:0.00} GB',$reserveGB))
+    $lines += ("    Total growth (Max + 20GB) : {0}" -f [string]::Format($culture,'{0:0.00} GB',$totalGrowthGB))
+    $lines += ("    Supported now             : {0}" -f ($(if ($supported) { 'YES' } else { 'NO' })))
+}
+if (-not $altFound) {
     $lines += ""
     $lines += "Alternative drive check:"
     $lines += "  No D: or E: fixed drive found."
