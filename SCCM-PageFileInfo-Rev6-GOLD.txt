@@ -1,0 +1,127 @@
+[CmdletBinding()]
+param()
+
+# ====== Pasta de saída ======
+$destDir = 'C:\temp\PageFileInfo'
+if (!(Test-Path -LiteralPath $destDir)) { New-Item -Path $destDir -ItemType Directory -Force | Out-Null }
+$xlsFile = Join-Path $destDir ("PageFileInfo{0}.xls" -f $env:COMPUTERNAME)
+
+# ====== Utilidades ======
+$culture = [System.Globalization.CultureInfo]::InvariantCulture
+$now = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+
+function Format-MB-GB([int]$mb) {
+    $gb = [double]($mb/1KB)
+    [string]::Format([System.Globalization.CultureInfo]::InvariantCulture, "{0} MB ({1:0.00} GB)", $mb, $gb)
+}
+
+# ====== Coleta de RAM ======
+try {
+    $bytes = (Get-CimInstance Win32_PhysicalMemory -ErrorAction Stop | Measure-Object Capacity -Sum).Sum
+    if (-not $bytes) { $bytes = (Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory }
+} catch {
+    $bytes = (Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory
+}
+$ramMB = [int][math]::Round($bytes/1MB)
+$minMB = [int]([math]::Round($ramMB * 1.5))
+$maxMB = [int]([math]::Round($ramMB * 3))
+
+# ====== Estado do pagefile / discos ======
+$cs = Get-CimInstance Win32_ComputerSystem
+$auto = [bool]$cs.AutomaticManagedPagefile
+$disks = Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3"
+
+# ====== Função: Exporta para .xls (SpreadsheetML 2003 - abre no Excel sem precisar do Excel instalado) ======
+function Export-ExcelXml {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)] [string]$Path,
+        [Parameter(Mandatory)] [hashtable]$Sheets
+    )
+    $sb = New-Object System.Text.StringBuilder
+    $append = { param($t); [void]$sb.AppendLine($t) }
+    $esc = { param($v) if ($null -eq $v) { '' } else { [System.Security.SecurityElement]::Escape([string]$v) } }
+    $isNum = { param($v) ($v -is [int]) -or ($v -is [long]) -or ($v -is [double]) -or ($v -is [decimal]) }
+
+    & $append '<?xml version="1.0"?>'
+    & $append '<?mso-application progid="Excel.Sheet"?>'
+    & $append '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"'
+    & $append ' xmlns:o="urn:schemas-microsoft-com:office:office"'
+    & $append ' xmlns:x="urn:schemas-microsoft-com:office:excel"'
+    & $append ' xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">'
+    & $append '  <Styles>'
+    & $append '    <Style ss:ID="Header"><Font ss:Bold="1"/><Interior ss:Color="#F2F2F2" ss:Pattern="Solid"/></Style>'
+    & $append '    <Style ss:ID="DefaultNumber"><NumberFormat ss:Format="General"/></Style>'
+    & $append '  </Styles>'
+
+    foreach ($sheetName in $Sheets.Keys) {
+        $rows = @($Sheets[$sheetName])
+        if (-not $rows) { $rows = @() }
+
+        $props = @()
+        if ($rows.Count -gt 0) {
+            $props = $rows[0].PSObject.Properties.Name
+        } else { $props = @('Vazio') }
+
+        & $append ("  <Worksheet ss:Name=""$((& $esc $sheetName))"">")
+        & $append '    <Table>'
+
+        & $append '      <Row>'
+        foreach ($p in $props) {
+            & $append ("        <Cell ss:StyleID=""Header""><Data ss:Type=""String"">$((& $esc $p))</Data></Cell>")
+        }
+        & $append '      </Row>'
+
+        foreach ($r in $rows) {
+            & $append '      <Row>'
+            foreach ($p in $props) {
+                $val = $null
+                if ($r -and $r.PSObject.Properties[$p]) { $val = $r.$p }
+                if (& $isNum $val) {
+                    & $append ("        <Cell ss:StyleID=""DefaultNumber""><Data ss:Type=""Number"">$val</Data></Cell>")
+                } else {
+                    & $append ("        <Cell><Data ss:Type=""String"">$((& $esc $val))</Data></Cell>")
+                }
+            }
+            & $append '      </Row>'
+        }
+
+        & $append '    </Table>'
+        & $append '  </Worksheet>'
+    }
+
+    & $append '</Workbook>'
+
+    $dir = Split-Path -Path $Path -Parent
+    if ($dir -and -not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+    [System.IO.File]::WriteAllText($Path, $sb.ToString(), [System.Text.Encoding]::UTF8)
+}
+
+# ====== Planilha "Sizing" com as 5 colunas pedidas ======
+# Free Space em C:
+$cDrive = $disks | Where-Object { $_.DeviceID -eq 'C:' }
+$freeC_GB = if ($cDrive) { [math]::Round(($cDrive.FreeSpace/1GB), 2) } else { $null }
+
+# Max Mem = RAM x 3 (GB)
+$maxMem_GB = [math]::Round(($maxMB / 1024.0), 2)
+
+# To UP = MaxMem - FreeC (>=0)
+$toUp_GB = if ($null -ne $freeC_GB) { [math]::Round([math]::Max(0, $maxMem_GB - $freeC_GB), 2) } else { $null }
+
+# Windows Update = To UP + 20 GB (ajustável)
+$wuBufferGB = 20.0
+$winUpdate_GB = if ($null -ne $toUp_GB) { [math]::Round($toUp_GB + $wuBufferGB, 2) } else { $null }
+
+$sizingRow = [pscustomobject]@{
+    'Name'                         = $env:COMPUTERNAME
+    'Free Space in C drive in GBs' = $freeC_GB
+    'Max Mem (RAM x3)'             = $maxMem_GB
+    'To UP (MaxMem - Free C)'      = $toUp_GB
+    'Windows Update (To UP + 20)'  = $winUpdate_GB
+}
+
+$SheetsForExport = @{ 'Sizing' = @($sizingRow) }
+
+# ====== Gera o .XLS ======
+Export-ExcelXml -Path $xlsFile -Sheets $SheetsForExport
+Write-Host "Gerado: $xlsFile"
