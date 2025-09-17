@@ -1,0 +1,43 @@
+[CmdletBinding()]
+param(
+  [string]$ServerListFile = 'C:\temp\PageFileInfo\servers1.txt',
+  [string]$LocalDest      = 'C:\temp\PageFileInfo',
+  [string]$RemoteRelPath  = 'C$\temp\PageFileInfo',
+  [int]$PingTimeoutSec    = 2
+)
+
+if (!(Test-Path -LiteralPath $LocalDest)) { New-Item -Path $LocalDest -ItemType Directory -Force | Out-Null }
+
+$servers = Get-Content -LiteralPath $ServerListFile -ErrorAction Stop |
+  ForEach-Object { $_.Trim() } | Where-Object { $_ -and $_ -notmatch '^\s*#' } | Select-Object -Unique
+
+$result = New-Object System.Collections.Generic.List[object]
+
+foreach ($s in $servers) {
+  if (-not (Test-Connection -ComputerName $s -Count 1 -Quiet -TimeoutSeconds $PingTimeoutSec)) {
+    $result.Add([pscustomobject]@{Server=$s; Status='Offline'; FilesFound=0; Copied=0; Note='Ping fail'})
+    continue
+  }
+
+  $found=0; $copied=0; $err=$null; $status=''
+  try {
+    $unc = "\\$s\$RemoteRelPath"
+    $files = Get-ChildItem -Path $unc -File -ErrorAction SilentlyContinue |
+      Where-Object { $_.Name -like 'PageFileInfo*.xls' -or $_.Name -like 'PageFileInfo*.xlsx' }
+
+    $found = ($files | Measure-Object).Count
+    foreach ($f in $files) {
+      Copy-Item -LiteralPath $f.FullName -Destination $LocalDest -Force -ErrorAction Stop
+      $copied++
+    }
+    $status = if ($copied -gt 0) { 'OK' } elseif ($found -eq 0) { 'NoFiles' } else { 'CopyFailed' }
+  } catch { $status='Error'; $err = $_.Exception.Message }
+
+  $result.Add([pscustomobject]@{Server=$s; Status=$status; FilesFound=$found; Copied=$copied; Note=$err})
+}
+
+$log = Join-Path $LocalDest ("CollectLog_{0:yyyyMMdd_HHmmss}.csv" -f (Get-Date))
+$result | Export-Csv -NoTypeInformation -Delimiter ';' -Encoding UTF8 -Path $log
+$result | Format-Table -AutoSize
+Write-Host "Arquivos copiados para: $LocalDest"
+Write-Host "Log: $log"
