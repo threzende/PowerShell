@@ -1,3 +1,36 @@
+##############################################################
+/-------- Office Skype Atualização
+
+msiexec /p "C:\Temp\kbs\lync-x-none_...\lync-x-none.msp" /qb-! /L*v "C:\Temp\kbs\lync_patch.log"
+
+
+
+$paths = @(
+  'C:\Program Files\Microsoft Office\Office16\lync.exe',
+  'C:\Program Files (x86)\Microsoft Office\Office16\lync.exe'
+)
+foreach ($p in $paths) { if (Test-Path $p) { "$p -> " + (Get-Item $p).VersionInfo.FileVersion } }
+
+
+
+
+
+
+
+##############################################################
+
+
+
+
+
+
+
+
+
+
+
+
+
 Hive:
 HKEY_LOCAL_MACHINE
 
