@@ -28,8 +28,14 @@ $patches | Where-Object { $_.DisplayName -match $kb } |
 >
 
 
+<
+taskkill /IM lync.exe /F
+>
 
 
+<
+msiexec /p "C:\Temp\kbs\lync-x-none_...\lync-x-none.msp" REINSTALL=ALL REINSTALLMODE=omus /qb-! /L*v "C:\Temp\kbs\lync_force.log"
+>
 
 
 ##############################################################
