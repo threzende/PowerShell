@@ -4,13 +4,28 @@
 msiexec /p "C:\Temp\kbs\lync-x-none_...\lync-x-none.msp" /qb-! /L*v "C:\Temp\kbs\lync_patch.log"
 
 
-
+<
 $paths = @(
   'C:\Program Files\Microsoft Office\Office16\lync.exe',
   'C:\Program Files (x86)\Microsoft Office\Office16\lync.exe'
 )
 foreach ($p in $paths) { if (Test-Path $p) { "$p -> " + (Get-Item $p).VersionInfo.FileVersion } }
+>
 
+
+<
+# Ver se o KB5002181 (Office/Skype MSI) está instalado
+$kb = 'KB5002181'
+
+$patches = Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\UserData\S-1-5-18\Products' -Recurse -ErrorAction SilentlyContinue |
+  Where-Object { $_.PSPath -like '*\Patches\*' } |
+  ForEach-Object {
+    try { Get-ItemProperty -Path $_.PSPath -Name DisplayName, MoreInfoURL, Installed -ErrorAction Stop } catch {}
+  }
+
+$patches | Where-Object { $_.DisplayName -match $kb } |
+  Select-Object DisplayName, Installed, MoreInfoURL, PSPath
+>
 
 
 
