@@ -23,6 +23,30 @@ Get-NetNeighbor -IPAddress 192.168.99.20 -AddressFamily IPv4
 
 
 
+Server 20 (IF = 15)
+route -p add 192.168.99.21 mask 255.255.255.255 0.0.0.0 IF 15
+
+Server 21 (IF = 12)
+route -p add 192.168.99.20 mask 255.255.255.255 0.0.0.0 IF 12
+
+Teste rápido
+
+No 20:
+
+Test-NetConnection 192.168.99.21 -Port 5701 -SourceAddress 192.168.99.20 -InformationLevel Detailed
+
+
+No 21:
+
+Test-NetConnection 192.168.99.20 -Port 5701 -SourceAddress 192.168.99.21 -InformationLevel Detailed
+
+Conferir / Remover (se precisar)
+route print 192.168.99.21
+route print 192.168.99.20
+
+route delete 192.168.99.21
+route delete 192.168.99.20
+
 
 
 
