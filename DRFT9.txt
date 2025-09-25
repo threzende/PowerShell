@@ -50,6 +50,13 @@ route delete 192.168.99.20
 
 
 
+Test-NetConnection 192.168.99.20 -Port 5701 -SourceAddress 192.168.99.21 -InformationLevel Detailed
+Get-NetNeighbor -IPAddress 192.168.99.20 -AddressFamily IPv4
+
+
+
+
+
 
 
 
