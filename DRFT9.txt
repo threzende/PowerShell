@@ -4,6 +4,9 @@ Test-NetConnection -ComputerName 192.168.99.21 -Port 5701 -SourceAddress 192.168
 
 
 
+ping 192.168.99.21 -n 1
+Get-NetNeighbor -IPAddress 192.168.99.21 -AddressFamily IPv4
+# ou: arp -a | findstr 192.168.99.21
 
 
 
