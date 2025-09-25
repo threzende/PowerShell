@@ -10,6 +10,12 @@ Get-NetNeighbor -IPAddress 192.168.99.21 -AddressFamily IPv4
 
 
 
+no servidor 21 que o APP0092V
+
+ping 192.168.99.20 -n 1
+Get-NetNeighbor -IPAddress 192.168.99.20 -AddressFamily IPv4
+
+
 
 
 
