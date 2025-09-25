@@ -57,6 +57,11 @@ Get-NetNeighbor -IPAddress 192.168.99.20 -AddressFamily IPv4
 
 
 
+ping -S 192.168.99.21 192.168.99.20 -n 1
+Get-NetNeighbor -IPAddress 192.168.99.20 -AddressFamily IPv4
+
+
+
 
 
 
