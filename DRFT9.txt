@@ -1,3 +1,38 @@
+
+
+# 1) Versão do WinWord (ajusta para x86 se precisar)
+$exe1="C:\Program Files\Microsoft Office\root\Office16\WINWORD.EXE"
+$exe2="C:\Program Files (x86)\Microsoft Office\root\Office16\WINWORD.EXE"
+$exe = if (Test-Path $exe1) { $exe1 } elseif (Test-Path $exe2) { $exe2 } else { $null }
+"WINWORD path: $exe"
+if ($exe) { (Get-Item $exe).VersionInfo.FileVersion } else { "WINWORD.EXE não encontrado" }
+
+# 2) Configuração do Click-to-Run (canal, update path etc.)
+reg query "HKLM\SOFTWARE\Microsoft\Office\ClickToRun\Configuration" /v UpdateChannel
+reg query "HKLM\SOFTWARE\Microsoft\Office\ClickToRun\Configuration" /v UpdatePath
+reg query "HKLM\SOFTWARE\Microsoft\Office\ClickToRun\Configuration" /v ProductReleaseIds
+
+# 3) Políticas que podem travar a versão alvo
+reg query "HKLM\SOFTWARE\Policies\Microsoft\Office\16.0\Common\OfficeUpdate" /v TargetVersion
+reg query "HKLM\SOFTWARE\Policies\Microsoft\Office\16.0\Common\OfficeUpdate" /v UpdateChannel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ##################################################################
 /---------- TNC
 Test-NetConnection -ComputerName 192.168.99.21 -Port 5701 -SourceAddress 192.168.99.<seu_ip>
