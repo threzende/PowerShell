@@ -1,5 +1,32 @@
 
 
+
+
+(Get-Item "C:\Program Files\Microsoft Office\root\Office16\WINWORD.EXE").VersionInfo.FileVersion
+
+
+
+
+# (2.1) Fixar canal do LTSC 2021 (PerpetualVL2021)
+reg add "HKLM\SOFTWARE\Microsoft\Office\ClickToRun\Configuration" `
+ /v UpdateChannel /t REG_SZ `
+ /d https://officecdn.microsoft.com/pr/492350f6-3a01-4f97-b9c0-c7c6ddf67d60 /f
+
+# (2.2) (opcional) Fixar exatamente a versão corrigida
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Office\16.0\Common\OfficeUpdate" `
+ /v TargetVersion /t REG_SZ /d 16.0.14334.20244 /f
+
+# (2.3) Fechar apps do Office e forçar update
+$cli="$Env:ProgramFiles\Common Files\Microsoft Shared\ClickToRun\OfficeC2RClient.exe"
+& $cli /update user updatetoversion=16.0.14334.20244 forceappshutdown=true
+
+
+
+
+
+
+
+
 # 1) Versão do WinWord (ajusta para x86 se precisar)
 $exe1="C:\Program Files\Microsoft Office\root\Office16\WINWORD.EXE"
 $exe2="C:\Program Files (x86)\Microsoft Office\root\Office16\WINWORD.EXE"
