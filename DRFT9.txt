@@ -1,158 +1,23 @@
-Confirme o que você está testando
+Start-Job -Name Port22Test -ScriptBlock {
+  $l = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Any,22)
+  $l.Start()
+  while ($true) {
+    $c = $l.AcceptTcpClient()
+    $s = $c.GetStream()
+    $msg = [Text.Encoding]::ASCII.GetBytes("OK 22 `r`n")
+    $s.Write($msg,0,$msg.Length); $s.Flush(); $c.Close()
+  }
+}
 
-# Veja para qual IP "serverX1" resolve
-Resolve-DnsName serverX1
+Test-NetConnection serverX1 -Port 22 -InformationLevel Detailed
+# ou: tnc serverX1 -port 22
 
-# Liste os IPs locais para ver se esse IP é do próprio host
-Get-NetIPAddress -AddressFamily IPv4 | Select IPAddress,InterfaceAlias
+#
+Get-Job Port22Test | Stop-Job
+Get-Job Port22Test | Remove-Job
 
-
-Se serverX1 não resolve para um IP local, você está testando a rede (NAT/LB/etc.). Para testar o listen local, use 127.0.0.1 ou o IP local.
-
-Veja se há algo escutando na 22
-----
-# Em Windows moderno:
+#
 Get-NetTCPConnection -State Listen -LocalPort 22
-----
-# Ou o clássico:
-netstat -ano | findstr ":22"
-
-
-Se não aparecer nada, não há serviço escutando.
-
-Cheque/instale o OpenSSH Server
------
-# Ver se está instalado
-Get-WindowsCapability -Online -Name OpenSSH.Server*
-
-# Instalar (se necessário)
-Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
-
-# Iniciar e configurar para iniciar com o sistema
-Start-Service sshd
-Set-Service -Name sshd -StartupType Automatic
-
-# (Opcional) Iniciar o agente se precisar
-# Start-Service ssh-agent
--------
-
-Habilite a regra no Firewall do Windows
--------
-# Ver regras relacionadas
-Get-NetFirewallRule -DisplayName "*OpenSSH*" | Format-Table -Auto
-
-# Criar uma regra caso não exista
-New-NetFirewallRule -Name OpenSSH-Server-In-TCP -DisplayName "OpenSSH Server (sshd)" `
-  -Enabled True -Direction Inbound -Protocol TCP -Action Allow -LocalPort 22
------
-
-Re-testes
-------
-# Teste local (loopback) – verifica se há listener
-Test-NetConnection -ComputerName 127.0.0.1 -Port 22 -InformationLevel Detailed
-
-# Teste pelo IP da máquina (pega firewall também)
-$ip = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object {$_.IPAddress -notlike '169.*'} | Select-Object -First 1).IPAddress
-Test-NetConnection -ComputerName $ip -Port 22 -InformationLevel Detailed
-------
-
-Se local OK e remoto ainda falhar, aí o problema tende a ser rede (ACL, NACL, Security Group, FW perimetral, roteamento, etc.). Peça para testarem de outra máquina:
-------
-Test-NetConnection -ComputerName serverX1 -Port 22 -InformationLevel Detailed
-------
-Script PowerShell “Tudo-em-um”
-
-Copie e execute no serverX1 (como Admin). Ele checa DNS, listener, instala e sobe o OpenSSH se faltar, ajusta firewall e faz testes locais/remotos:
----------
-# === Diagnóstico e correção da porta 22 (OpenSSH) no Windows Server 2019 ===
-$ErrorActionPreference = "SilentlyContinue"
-
-Write-Host "===> 1) Resolução de nome" -ForegroundColor Cyan
-try {
-  $dns = Resolve-DnsName serverX1 -ErrorAction Stop
-  $dnsIPs = $dns | Where-Object {$_.Type -eq 'A'} | Select-Object -ExpandProperty IPAddress
-  Write-Host ("serverX1 -> {0}" -f ($dnsIPs -join ", "))
-} catch {
-  Write-Host "Não foi possível resolver 'serverX1'." -ForegroundColor Yellow
-  $dnsIPs = @()
-}
-
-Write-Host "`n===> 2) IPs locais" -ForegroundColor Cyan
-$localIPs = Get-NetIPAddress -AddressFamily IPv4 | Where-Object {$_.IPAddress -notlike '169.*'} | Select-Object -ExpandProperty IPAddress
-Write-Host ("Locais: {0}" -f ($localIPs -join ", "))
-
-Write-Host "`n===> 3) Há algo escutando na porta 22?" -ForegroundColor Cyan
-$listen = Get-NetTCPConnection -State Listen -LocalPort 22
-if ($listen) {
-  Write-Host "Já existe listener na 22." -ForegroundColor Green
-  $pids = $listen | Select-Object -ExpandProperty OwningProcess -Unique
-  foreach($pid in $pids){
-    try {
-      $p = Get-Process -Id $pid
-      Write-Host ("Processo: {0} (PID {1})" -f $p.ProcessName, $p.Id)
-    } catch {}
-  }
-} else {
-  Write-Host "Nenhum listener encontrado na 22." -ForegroundColor Yellow
-}
-
-Write-Host "`n===> 4) Status do OpenSSH Server" -ForegroundColor Cyan
-$cap = Get-WindowsCapability -Online -Name OpenSSH.Server*
-$sshdInstalled = $cap.State -eq 'Installed'
-Write-Host ("OpenSSH Server instalado? {0}" -f $sshdInstalled)
-
-if (-not $sshdInstalled) {
-  Write-Host "Instalando OpenSSH Server..." -ForegroundColor Yellow
-  Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0 | Out-Null
-}
-
-# Garantir serviço em execução
-$svc = Get-Service -Name sshd -ErrorAction SilentlyContinue
-if ($svc) {
-  if ($svc.Status -ne 'Running') {
-    Write-Host "Iniciando serviço sshd..." -ForegroundColor Yellow
-    Start-Service sshd
-  }
-  Set-Service -Name sshd -StartupType Automatic
-} else {
-  Write-Host "Serviço sshd não encontrado mesmo após tentativa de instalação." -ForegroundColor Red
-}
-
-Write-Host "`n===> 5) Firewall do Windows" -ForegroundColor Cyan
-$fwRule = Get-NetFirewallRule -DisplayName "OpenSSH Server (sshd)" -ErrorAction SilentlyContinue
-if (-not $fwRule) {
-  Write-Host "Criando regra de firewall para porta 22..." -ForegroundColor Yellow
-  New-NetFirewallRule -Name OpenSSH-Server-In-TCP -DisplayName "OpenSSH Server (sshd)" `
-    -Enabled True -Direction Inbound -Protocol TCP -Action Allow -LocalPort 22 | Out-Null
-} else {
-  Write-Host "Regra de firewall encontrada." -ForegroundColor Green
-}
-
-Start-Sleep -Seconds 2
-
-Write-Host "`n===> 6) Testes de conectividade local" -ForegroundColor Cyan
-tnc 127.0.0.1 -Port 22 -InformationLevel Detailed
-foreach ($lip in $localIPs) {
-  tnc $lip -Port 22 -InformationLevel Detailed
-}
-
-if ($dnsIPs.Count -gt 0) {
-  Write-Host "`n===> 7) Teste usando o nome 'serverX1' (pode sair pela rede)" -ForegroundColor Cyan
-  tnc serverX1 -Port 22 -InformationLevel Detailed
-}
-
-Write-Host "`nConcluído."
--------
-
-Interpretação rápida dos resultados
-
-Sem listener na etapa 3 → instale/inicie o sshd (etapa 4).
-
-Listener OK, teste 127.0.0.1 OK, mas teste remoto falha → rede/perímetro/ACL. Envie para o time de network o IP do servidor, hora do teste e o result code/SYN do TNC remoto.
-
-Nome ‘serverX1’ resolve para IP diferente do host → você estava testando outro destino (LB, VIP, etc.). Teste pelo IP correto.
-
-
 
 
 #################################################################
