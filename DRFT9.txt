@@ -1,5 +1,17 @@
 
 
+# Veja para qual IP "serverX1" resolve
+Resolve-DnsName serverX1
+
+# Liste os IPs locais para ver se esse IP é do próprio host
+Get-NetIPAddress -AddressFamily IPv4 | Select IPAddress,InterfaceAlias
+
+
+
+
+#################################################################
+
+atualiza offce VL 2021 funciounou top
 
 
 (Get-Item "C:\Program Files\Microsoft Office\root\Office16\WINWORD.EXE").VersionInfo.FileVersion
