@@ -1,3 +1,9 @@
+Test-NetConnection 127.0.0.1 -Port 22
+$ip = (Get-NetIPAddress -AddressFamily IPv4 | Where {$_.IPAddress -notlike '169.*'} | Select -First 1 -Expand IPAddress)
+Test-NetConnection $ip -Port 22
+tasklist /fi "PID eq 14784"
+
+
 Start-Job -Name Port22Test -ScriptBlock {
   $l = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Any,22)
   $l.Start()
