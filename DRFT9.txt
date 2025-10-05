@@ -1,3 +1,10 @@
+/---------- Deploy SCCM adobe ....576
+
+msiexec.exe /x {AC76BA86-7AD7-1033-7B44-AC0F074E4100} /qn /norestart
+
+#######################################################################
+
+
 $paths = @(
   "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
   "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"
