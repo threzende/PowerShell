@@ -1,4 +1,28 @@
 
+/---------- Descobre versao do Adobe reader
+$paths = @(
+    "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*",
+    "HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*"
+)
+
+foreach ($path in $paths) {
+    Get-ItemProperty $path |
+    Where-Object { $_.DisplayName -like "*Adobe*" -or $_.DisplayName -like "*Acrobat*" } |
+    Select-Object DisplayName, DisplayVersion
+}
+
+
+
+
+
+
+
+
+
+
+
+
+#######################################################################
 /---------- Descobre Assinatura do Defender
 Get-MpComputerStatus | Select-Object -Property AntivirusSignatureVersion
 Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows Defender\Signature Updates" | Select-Object AVSignatureVersion, ASSignatureVersion, EngineVersion, LastUpdateTime
