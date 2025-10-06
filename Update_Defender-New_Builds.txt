@@ -1,0 +1,75 @@
+# ===== Microsoft Defender Offline Update (mpam-fe.exe) with logging =====
+# Log: C:\defupdate1\logs\DefOffline_YYYYMMDD_HHMMSS.log
+# Exit codes: 0=success, 1=error
+
+$ErrorActionPreference = 'Stop'
+$ProgressPreference = 'SilentlyContinue'
+
+# Folders
+$base   = 'C:\defupdate1'
+$pkgDir = Join-Path $base 'packages'
+$logDir = Join-Path $base 'logs'
+New-Item -ItemType Directory -Path $pkgDir -Force | Out-Null
+New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+
+# Logging
+$stamp  = Get-Date -Format 'yyyyMMdd_HHmmss'
+$log    = Join-Path $logDir "DefOffline_$stamp.log"
+Start-Transcript -Path $log -Append | Out-Null
+function Log { param([string]$m,[string]$lvl='INFO')
+  $line = '{0} [{1}] {2}' -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'),$lvl,$m
+  Write-Host $line
+}
+
+# Detect OS architecture and select official URL (fwlink resolves to mpam-fe)
+$arch = if ([Environment]::Is64BitOperatingSystem) { 'x64' } else { 'x86' }
+$uri  = "https://go.microsoft.com/fwlink/?LinkID=121721&arch=$arch"
+$dest = Join-Path $pkgDir "mpam-fe_$arch.exe"
+
+Log "OS Architecture: $arch"
+Log "Downloading package: $uri -> $dest"
+Invoke-WebRequest -Uri $uri -OutFile $dest -UseBasicParsing
+
+# Validate digital signature
+$sig = Get-AuthenticodeSignature -FilePath $dest
+Log ("Signature: Status={0}, Subject='{1}'" -f $sig.Status, $sig.SignerCertificate.Subject)
+if ($sig.Status -ne 'Valid' -or ($sig.SignerCertificate.Subject -notmatch 'CN=Microsoft')) {
+  Log "Invalid or non-Microsoft signature. Aborting." 'ERROR'
+  Stop-Transcript | Out-Null
+  exit 1
+}
+
+# Optional snapshot (will fail if WinDefend is disabled by policy)
+try {
+  $before = Get-MpComputerStatus
+  Log ("Before -> AV Sig: {0} | LastUpdated: {1}" -f $before.AntivirusSignatureVersion, $before.AntivirusSignatureLastUpdated)
+} catch { Log "Get-MpComputerStatus unavailable (expected if WinDefend is disabled by policy)." 'WARN' }
+
+# Run offline installer silently
+Log "Running mpam-fe.exe (silent)..."
+$proc = Start-Process -FilePath $dest -ArgumentList "/Q" -PassThru -Wait -WindowStyle Hidden
+Log ("mpam-fe.exe exited with code {0}" -f $proc.ExitCode)
+
+# Check result (only if service exposes state)
+$updated = $false
+try {
+  Start-Sleep -Seconds 3
+  $after = Get-MpComputerStatus
+  Log ("After  -> AV Sig: {0} | LastUpdated: {1}" -f $after.AntivirusSignatureVersion, $after.AntivirusSignatureLastUpdated)
+  if ($before -and $after -and (
+      $before.AntivirusSignatureVersion -ne $after.AntivirusSignatureVersion -or
+      $after.AntivirusSignatureLastUpdated -gt $before.AntivirusSignatureLastUpdated)) {
+    $updated = $true
+  }
+} catch { Log "Get-MpComputerStatus unavailable (OK if WinDefend is disabled)." 'WARN' }
+
+if ($proc.ExitCode -eq 0) {
+  Log "✅ Package applied. If the service is disabled by policy, state may not reflect via Get-MpComputerStatus." 'INFO'
+  Log "Log file: $log"
+  Stop-Transcript | Out-Null
+  exit 0
+} else {
+  Log "❌ mpam-fe.exe reported an error. See log: $log" 'ERROR'
+  Stop-Transcript | Out-Null
+  exit 1
+}
