@@ -1,24 +1,21 @@
-$script = @'
-$ErrorActionPreference = "Stop"
-Update-MpSignature
-'@
+# Import the ScheduledTasks module (required for task creation)
+Import-Module ScheduledTasks
 
-$folder = "$env:ProgramData\DefenderUpdate"
-New-Item -ItemType Directory -Path $folder -Force | Out-Null
-$ps1 = Join-Path $folder "DefenderUpdate1.ps1"
-$script | Out-File -FilePath $ps1 -Encoding UTF8 -Force
+# Define the task action: run PowerShell to update Microsoft Defender signatures
+$Action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-Command `"Update-MpSignature`""
 
-$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-NoLogo -NoProfile -ExecutionPolicy Bypass -File `"$ps1`""
-$trigger1 = New-ScheduledTaskTrigger -Daily -At 09:00
-$trigger2 = New-ScheduledTaskTrigger -Daily -At 17:00
-$principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
-$settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -ExecutionTimeLimit (New-TimeSpan -Hours 1)
+# Create two daily triggers: one at 9 AM and another at 5 PM
+$Trigger1 = New-ScheduledTaskTrigger -Daily -At 9am
+$Trigger2 = New-ScheduledTaskTrigger -Daily -At 5pm
 
-$taskName = "defenderUpdate1"
-$description = "Updates Microsoft Defender signature definitions at 09:00 and 17:00."
+# Set the task to run as SYSTEM with highest privileges
+$Principal = New-ScheduledTaskPrincipal -UserId "NT AUTHORITY\SYSTEM" -LogonType ServiceAccount -RunLevel Highest
 
-if (Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue) {
-  Unregister-ScheduledTask -TaskName $taskName -Confirm:$false
-}
+# Configure task settings: allow on battery, don't stop on battery, start when available
+$Settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
 
-Register-ScheduledTask -TaskName $taskName -Action $action -Trigger @($trigger1, $trigger2) -Principal $principal -Settings $settings -Description $description
+# Register the task with the name "UpdateDefender2"
+Register-ScheduledTask -TaskName "UpdateDefender2" -Action $Action -Trigger $Trigger1, $Trigger2 -Principal $Principal -Settings $Settings
+
+# Output success message
+Write-Host "✅ Task 'UpdateDefender2' created successfully!"
