@@ -1,6 +1,9 @@
 
 /---------- Descobre Assinatura do Defender
 Get-MpComputerStatus | Select-Object -Property AntivirusSignatureVersion
+Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows Defender\Signature Updates" | Select-Object AVSignatureVersion, ASSignatureVersion, EngineVersion, LastUpdateTime
+
+
 
 
 #######################################################################
