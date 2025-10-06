@@ -16,6 +16,39 @@ foreach ($path in $paths) {
 
 
 
+2<
+
+$computerName = $env:COMPUTERNAME
+$results = @()
+
+$paths = @(
+    "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*",
+    "HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*"
+)
+
+foreach ($path in $paths) {
+    $apps = Get-ItemProperty $path |
+        Where-Object { $_.DisplayName -like "*Adobe*" -or $_.DisplayName -like "*Acrobat*" } |
+        Select-Object @{Name="Computer";Expression={$computerName}}, DisplayName, DisplayVersion
+
+    $results += $apps
+}
+
+if ($results) {
+    $results
+} else {
+    [PSCustomObject]@{
+        Computer = $computerName
+        DisplayName = "Nenhum Adobe encontrado"
+        DisplayVersion = "-"
+    }
+}
+
+>
+
+
+
+
 
 
 
