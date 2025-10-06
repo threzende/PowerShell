@@ -1,0 +1,34 @@
+# Create C:\defupdate1\defenderUpdate.bat (no run now)
+$dir = "C:\defupdate1"
+$bat = Join-Path $dir "defenderUpdate.bat"
+
+New-Item -ItemType Directory -Path $dir -Force | Out-Null
+
+$batContent = @"
+@echo off
+setlocal
+rem Update Microsoft Defender signatures (WSUS first; fallback to MicrosoftUpdate)
+
+rem Try MpCmdRun.exe (newer path)
+if exist "%ProgramFiles%\Microsoft Defender\MpCmdRun.exe" (
+  "%ProgramFiles%\Microsoft Defender\MpCmdRun.exe" -SignatureUpdate
+  goto :end
+)
+
+rem Try MpCmdRun.exe (legacy path)
+if exist "%ProgramFiles%\Windows Defender\MpCmdRun.exe" (
+  "%ProgramFiles%\Windows Defender\MpCmdRun.exe" -SignatureUpdate
+  goto :end
+)
+
+rem Fallback via PowerShell cmdlet (requires Defender module)
+powershell.exe -NoLogo -NoProfile -Command "try { Update-MpSignature } catch { Update-MpSignature -UpdateSource MicrosoftUpdate }"
+
+:end
+endlocal
+exit /b 0
+"@
+
+$batContent | Out-File -FilePath $bat -Encoding ASCII -Force
+
+Write-Host "Created: $bat"
