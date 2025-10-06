@@ -1,0 +1,39 @@
+# --- Creates the 'defenderUpdate1' task to update Defender signatures at 09:00 and 17:00 (root path, no immediate run) ---
+
+# 1) Script that performs the update (respects your policies, e.g., WSUS)
+$script = @'
+$ErrorActionPreference = "Stop"
+Update-MpSignature
+'@
+
+# 2) Save the script to a fixed location
+$folder = "$env:ProgramData\DefenderUpdate"
+New-Item -ItemType Directory -Path $folder -Force | Out-Null
+$ps1 = Join-Path $folder "DefenderUpdate1.ps1"
+$script | Out-File -FilePath $ps1 -Encoding UTF8 -Force
+
+# 3) Define the scheduled task action
+$action   = New-ScheduledTaskAction -Execute "powershell.exe" `
+  -Argument "-NoLogo -NoProfile -ExecutionPolicy Bypass -File `"$ps1`""
+
+# 4) Triggers for 09:00 and 17:00, every day
+$trigger1 = New-ScheduledTaskTrigger -Daily -At 09:00
+$trigger2 = New-ScheduledTaskTrigger -Daily -At 17:00
+
+# 5) Run as SYSTEM with highest privileges
+$principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+
+# 6) Useful settings
+$settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries `
+  -ExecutionTimeLimit (New-TimeSpan -Hours 1)
+
+# 7) Create (or re-create) the 'defenderUpdate1' task in the root folder
+$taskName = "defenderUpdate1"
+
+if (Get-ScheduledTask -TaskName $taskName -TaskPath "\" -ErrorAction SilentlyContinue) {
+  Unregister-ScheduledTask -TaskName $taskName -TaskPath "\" -Confirm:$false
+}
+
+Register-ScheduledTask -TaskName $taskName -TaskPath "\" `
+  -Action $action -Trigger @($trigger1, $trigger2) `
+  -Principal $principal -Settings $settings
