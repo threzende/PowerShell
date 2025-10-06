@@ -1,0 +1,113 @@
+# 4N1===== Microsoft Defender Signature Update - Verbose & Logging =====
+# Output: C:\defupdate1\logs\DefenderUpdate_YYYYMMDD_HHMMSS.log
+# Exit codes: 0=sucesso (assinatura atualizada), 1=falhou/sem mudança
+
+$ErrorActionPreference = 'Stop'
+$ProgressPreference = 'SilentlyContinue'
+
+# -- Prep logs
+$baseDir = 'C:\defupdate1'
+$logDir  = Join-Path $baseDir 'logs'
+New-Item -ItemType Directory -Force -Path $logDir | Out-Null
+$stamp   = Get-Date -Format 'yyyyMMdd_HHmmss'
+$logPath = Join-Path $logDir "DefenderUpdate_$stamp.log"
+
+Start-Transcript -Path $logPath -Append | Out-Null
+
+function Write-Log {
+    param([string]$Message,[string]$Level='INFO')
+    $line = '{0} [{1}] {2}' -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), $Level, $Message
+    Write-Host $line
+}
+
+function Get-DefenderState {
+    try {
+        $s = Get-MpComputerStatus
+        [pscustomobject]@{
+            AvSignatureVersion   = $s.AntivirusSignatureVersion
+            AvLastUpdated        = $s.AntivirusSignatureLastUpdated
+            AmeEngineVersion     = $s.AMEngineVersion
+            NisEngineVersion     = $s.NISEngineVersion
+            AntispywareSigVer    = $s.AntispywareSignatureVersion
+            NisSignatureVersion  = $s.NISSignatureVersion
+        }
+    } catch {
+        Write-Log "Get-MpComputerStatus falhou: $($_.Exception.Message)" 'WARN'
+        return $null
+    }
+}
+
+function Updated($before,$after){
+    try {
+        if (-not $before -or -not $after) { return $false }
+        if ($before.AvSignatureVersion -ne $after.AvSignatureVersion) { return $true }
+        if ($after.AvLastUpdated -is [datetime] -and $before.AvLastUpdated -is [datetime]) {
+            if ($after.AvLastUpdated -gt $before.AvLastUpdated) { return $true }
+        }
+        return $false
+    } catch { return $false }
+}
+
+$before = Get-DefenderState
+Write-Log ("Before  -> AV Sig: {0} | LastUpdated: {1}" -f $before.AvSignatureVersion, $before.AvLastUpdated)
+
+$updated = $false
+
+# --- Passo 1: fonte padrão (respeita WSUS/GPO)
+try {
+    Write-Log "Tentando Update-MpSignature (fonte padrão)..." 'INFO'
+    Update-MpSignature -Verbose 4>&1 | ForEach-Object { Write-Log $_ }
+    Start-Sleep -Seconds 3
+    $after = Get-DefenderState
+    Write-Log ("Após WSUS -> AV Sig: {0} | LastUpdated: {1}" -f $after.AvSignatureVersion, $after.AvLastUpdated)
+    if (Updated $before $after) { $updated = $true }
+} catch {
+    Write-Log "Falha no Update-MpSignature (padrão): $($_.Exception.Message)" 'WARN'
+}
+
+# --- Passo 2: fallback MicrosoftUpdate (se não atualizou)
+if (-not $updated) {
+    try {
+        Write-Log "Tentando Update-MpSignature -UpdateSource MicrosoftUpdate (fallback)..." 'INFO'
+        Update-MpSignature -UpdateSource MicrosoftUpdate -Verbose 4>&1 | ForEach-Object { Write-Log $_ }
+        Start-Sleep -Seconds 3
+        $after = Get-DefenderState
+        Write-Log ("Após MU  -> AV Sig: {0} | LastUpdated: {1}" -f $after.AvSignatureVersion, $after.AvLastUpdated)
+        if (Updated $before $after) { $updated = $true }
+    } catch {
+        Write-Log "Falha no fallback MicrosoftUpdate: $($_.Exception.Message)" 'WARN'
+    }
+}
+
+# --- Passo 3: MpCmdRun.exe (novos e legados)
+if (-not $updated) {
+    $paths = @(
+        "$env:ProgramFiles\Microsoft Defender\MpCmdRun.exe",
+        "$env:ProgramFiles\Windows Defender\MpCmdRun.exe"
+    )
+    $mp = $paths | Where-Object { Test-Path $_ } | Select-Object -First 1
+    if ($mp) {
+        try {
+            Write-Log "Tentando MpCmdRun.exe -SignatureUpdate em '$mp'..." 'INFO'
+            & $mp -SignatureUpdate *>&1 | ForEach-Object { Write-Log $_ }
+            Start-Sleep -Seconds 3
+            $after = Get-DefenderState
+            Write-Log ("Após MpCmdRun -> AV Sig: {0} | LastUpdated: {1}" -f $after.AvSignatureVersion, $after.AvLastUpdated)
+            if (Updated $before $after) { $updated = $true }
+        } catch {
+            Write-Log "Falha no MpCmdRun.exe: $($_.Exception.Message)" 'WARN'
+        }
+    } else {
+        Write-Log "MpCmdRun.exe não encontrado em caminhos conhecidos." 'WARN'
+    }
+}
+
+if ($updated) {
+    Write-Log "✅ Atualização de assinaturas CONCLUÍDA com sucesso." 'INFO'
+    Stop-Transcript | Out-Null
+    exit 0
+} else {
+    Write-Log "❌ Não foi possível atualizar as assinaturas. Verifique o log: $logPath" 'ERROR'
+    Stop-Transcript | Out-Null
+    exit 1
+}
