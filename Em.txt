@@ -1,1 +1,10 @@
-I just finished the build; I only need to copy the files from D: of the other build to the current one. However, the server is already up and running with Windows Server 2019."
+APSD015V
+APSD017V
+APST005V
+APST006V
+APST008V
+SQLT002V
+SQLT003V
+WEBD008V
+WEBD011V
+WEBD016V
