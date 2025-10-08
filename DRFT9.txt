@@ -28,10 +28,61 @@ $results = foreach ($root in $roots) {
 }
 
 $results | Sort-Object Domain,Protocol | Format-Table
-
-
-
 >
+
+<<
+$rangeRoots = @(
+  'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings\ZoneMap\Ranges',
+  'HKCU:\Software\Policies\Microsoft\Windows\CurrentVersion\Internet Settings\ZoneMap\Ranges',
+  'HKLM:\Software\Policies\Microsoft\Windows\CurrentVersion\Internet Settings\ZoneMap\Ranges'
+)
+
+$rangeResults = foreach ($root in $rangeRoots) {
+  if (Test-Path $root) {
+    Get-ChildItem $root | ForEach-Object {
+      $props = Get-ItemProperty $_.PSPath
+      # Zone=2 => Trusted
+      if ($props.Zone -eq 2) {
+        [pscustomobject]@{
+          Source   = $root
+          Range    = $props.':Range'
+          Protocol = ($props.PSObject.Properties.Name | Where-Object {$_ -in 'http','https','*'})
+          ZoneId   = 2
+        }
+      }
+    }
+  }
+}
+
+$rangeResults | Sort-Object Range | Format-Table
+>
+
+<<
+$rangeRoots = @(
+  'HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings\ZoneMap\Ranges',
+  'HKCU:\Software\Policies\Microsoft\Windows\CurrentVersion\Internet Settings\ZoneMap\Ranges',
+  'HKLM:\Software\Policies\Microsoft\Windows\CurrentVersion\Internet Settings\ZoneMap\Ranges'
+)
+
+$rangeResults = foreach ($root in $rangeRoots) {
+  if (Test-Path $root) {
+    Get-ChildItem $root | ForEach-Object {
+      $props = Get-ItemProperty $_.PSPath
+      # Zone=2 => Trusted
+      if ($props.Zone -eq 2) {
+        [pscustomobject]@{
+          Source   = $root
+          Range    = $props.':Range'
+          Protocol = ($props.PSObject.Properties.Name | Where-Object {$_ -in 'http','https','*'})
+          ZoneId   = 2
+        }
+      }
+    }
+  }
+}
+
+$rangeResults | Sort-Object Range | Format-Table
+>>
 
 
 #######################################################################
