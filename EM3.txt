@@ -1,0 +1,4 @@
+After checking, both servers receive the same GPO and have the same Trusted Sites configuration.
+On Windows Server 2022, since IE is retired, the classic Internet Options UI is disabled/doesn’t list items when sites are enforced via GPO — this is by design.
+Policies are active and can be validated with gpresult/RSoP and in the registry (ZoneMap\Domains).
+In short: 2019 and 2022 apply the same; the only difference is the UI.
