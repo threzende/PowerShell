@@ -85,6 +85,34 @@ $rangeResults | Sort-Object Range | Format-Table
 >>
 
 
+<<<3
+# Compila só o método (sem 'using' e sem 'class')
+Add-Type -Namespace Urlmon -Name NativeMethods -MemberDefinition @"
+[System.Runtime.InteropServices.DllImport("urlmon.dll", CharSet=System.Runtime.InteropServices.CharSet.Unicode)]
+public static extern int MapUrlToZone(string pwszUrl, out int pdwZone, int dwFlags);
+"@
+
+function Get-UrlZone {
+  param([Parameter(Mandatory)][string]$Url)
+
+  $zone = 0
+  $hr = [Urlmon.NativeMethods]::MapUrlToZone($Url, [ref]$zone, 0)
+  if ($hr -ne 0) { throw ("MapUrlToZone failed: 0x{0:X8}" -f $hr) }
+
+  $names = @{0='LocalMachine';1='Intranet';2='Trusted';3='Internet';4='Restricted'}
+  [pscustomobject]@{
+    Url      = $Url
+    ZoneId   = $zone
+    ZoneName = $names[$zone]
+  }
+}
+
+# Testes (lembre que é por protocolo!)
+Get-UrlZone 'https://sharepoint.us'
+Get-UrlZone 'http://sharepoint.us'
+
+3>>>
+
 #######################################################################
 /---------- Descobre versao do Adobe reader
 $paths = @(
