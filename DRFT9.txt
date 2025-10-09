@@ -113,6 +113,45 @@ Get-UrlZone 'http://sharepoint.us'
 
 3>>>
 
+<<<<4
+# Interface COM IInternetSecurityManager (só os 3 primeiros métodos, na ordem correta)
+Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+
+[ComImport, Guid("79eac9ee-baf9-11ce-8c82-00aa004ba90b"),
+ InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+public interface IInternetSecurityManager {
+  void SetSecuritySite(IntPtr pSite);
+  void GetSecuritySite(out IntPtr pSite);
+  void MapUrlToZone([MarshalAs(UnmanagedType.LPWStr)] string pwszUrl,
+                    out int pdwZone, int dwFlags);
+}
+
+[ComImport, Guid("7b8a2d95-0ac9-11d1-896c-00c04fb6bfc4")]
+public class InternetSecurityManager {}
+"@
+
+function Get-UrlZoneCom {
+  param([Parameter(Mandatory)][string]$Url)
+
+  $mgr = [Activator]::CreateInstance([type]::GetTypeFromCLSID('7b8a2d95-0ac9-11d1-896c-00c04fb6bfc4'))
+  $mgr = [IInternetSecurityManager]$mgr
+
+  $zone = 0
+  $mgr.MapUrlToZone($Url, [ref]$zone, 0)
+  $names = @{0='LocalMachine';1='Intranet';2='Trusted';3='Internet';4='Restricted'}
+  [pscustomobject]@{ Url=$Url; ZoneId=$zone; ZoneName=$names[$zone] }
+}
+
+# Teste
+Get-UrlZoneCom 'https://sharepoint.us'
+Get-UrlZoneCom 'http://sharepoint.us'
+4>>>>
+
+
+
+
 #######################################################################
 /---------- Descobre versao do Adobe reader
 $paths = @(
