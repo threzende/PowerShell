@@ -1,3 +1,8 @@
+
+#######################################################################
+msiexec /i "carbon_black-installer_vista_win7_win8-64-4.0.3.2.msi" CC=123 REINSTALL=ALL REINSTALLMODE=vomus /qn /l*v "C:\Temp\cbdefensinstall.log"
+
+
 #######################################################################
 /---------- Trusted Sites
 <
