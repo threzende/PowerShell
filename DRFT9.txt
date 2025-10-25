@@ -1,3 +1,25 @@
+$sourcePath = "\\serverXXXX\pacotes\cb"
+$localPath = "C:\Temp\CBInstall"
+$installerName = "carbon_black-installer_vista_win7_win8-64-4.0.3.2.msi"
+
+# Cria pasta local se não existir
+if (!(Test-Path $localPath)) {
+    New-Item -ItemType Directory -Path $localPath | Out-Null
+    Write-Host "Pasta local criada: $localPath"
+}
+
+# Copia o instalador
+Write-Host "Copiando instalador para $localPath..."
+robocopy $sourcePath $localPath $installerName /NFL /NDL /NJH /NJS /nc /ns /np
+
+# Verifica se foi copiado
+if (Test-Path "$localPath\$installerName") {
+    Write-Host "Instalador copiado com sucesso!"
+    exit 0
+} else {
+    Write-Host "Falha ao copiar o instalador."
+    exit 1
+}
 
 #######################################################################
 msiexec /i "carbon_black-installer_vista_win7_win8-64-4.0.3.2.msi" CC=123 REINSTALL=ALL REINSTALLMODE=vomus /qn /l*v "C:\Temp\cbdefensinstall.log"
