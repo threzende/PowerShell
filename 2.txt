@@ -1,0 +1,26 @@
+Write-Output "=== BASIC ==="
+$cs = Get-WmiObject Win32_ComputerSystem
+Write-Output ("Hostname: " + $env:COMPUTERNAME)
+Write-Output ("Domain: " + $cs.Domain)
+Write-Output ("PartOfDomain: " + $($cs.PartOfDomain))
+
+Write-Output "`n=== TIME ==="
+Write-Output (w32tm /query /status 2>&1)
+Write-Output ("Source: " + (w32tm /query /source 2>&1))
+
+Write-Output "`n=== DNS ==="
+$dns = (Get-DnsClientServerAddress -AddressFamily IPv4 | Where-Object {$_.ServerAddresses} | ForEach-Object {$_.ServerAddresses} | Select-Object -Unique)
+Write-Output ("DNS Servers: " + ($dns -join ", "))
+
+Write-Output "`n=== DOMAIN LOOKUPS ==="
+if ($cs.PartOfDomain) {
+  $dom = $cs.Domain
+  try { Write-Output "_ldap._tcp.$dom"; Write-Output ((Resolve-DnsName -Type SRV "_ldap._tcp.$dom" -ErrorAction Stop) | Out-String) } catch { Write-Output ("LDAP SRV ERR: " + $_.Exception.Message) }
+  try { Write-Output "_kerberos._tcp.$dom"; Write-Output ((Resolve-DnsName -Type SRV "_kerberos._tcp.$dom" -ErrorAction Stop) | Out-String) } catch { Write-Output ("KERB SRV ERR: " + $_.Exception.Message) }
+}
+
+Write-Output "`n=== SECURE CHANNEL ==="
+try { Test-ComputerSecureChannel -Verbose -ErrorAction Stop } catch { Write-Output ("SChannel ERR: " + $_.Exception.Message) }
+
+Write-Output "`n=== NIC ==="
+Get-NetIPConfiguration | Format-Table InterfaceAlias,IPv4Address,IPv4DefaultGateway,DnsClientServerAddress -Auto
