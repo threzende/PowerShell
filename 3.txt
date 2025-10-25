@@ -1,0 +1,5 @@
+$dns = @("10.0.0.10","10.0.0.11")  # <-- SUBSTITUA PELOS SEUS DCs/DNS
+$nic = (Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | Select-Object -First 1 -Expand Name)
+Set-DnsClientServerAddress -InterfaceAlias $nic -ServerAddresses $dns
+ipconfig /flushdns
+Write-Output "Applied DNS: $($dns -join ', ') on NIC: $nic"
