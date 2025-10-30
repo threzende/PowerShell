@@ -10,3 +10,18 @@ foreach ($p in $paths) {
         Get-Item $p | Select-Object FullName, @{Name="FileVersion";Expression={$_.VersionInfo.FileVersion}}
     }
 }
+
+
+
+
+
+
+
+##############################
+
+
+
+"HKLM:\SOFTWARE\Adobe\Adobe Acrobat","HKLM:\SOFTWARE\WOW6432Node\Adobe\Adobe Acrobat" |
+  ForEach-Object { Get-ChildItem $_ -ErrorAction SilentlyContinue } |
+  ForEach-Object { Get-ItemProperty $_.PsPath -ErrorAction SilentlyContinue } |
+  Select-Object PSChildName, InstallPath, Path
