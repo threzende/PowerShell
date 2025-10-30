@@ -1,0 +1,2 @@
+Get-Content "C:\cfn\log\cfn-init.log" -Tail 200 -ErrorAction SilentlyContinue
+Get-Content "C:\cfn\logs\cfn-init.log" -Tail 200 -ErrorAction SilentlyContinue
