@@ -117,3 +117,10 @@ Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*" ,
   Select-Object DisplayName, DisplayVersion, PSChildName
 
 
+
+
+8 ############################
+
+"C:\Program Files\Common Files\Adobe\ARM\1.0\AdobeARM.exe" /product=1 /update=1
+
+
