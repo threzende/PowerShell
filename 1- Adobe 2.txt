@@ -55,3 +55,41 @@ Get-WmiObject -Class Win32_Product |
 
 Get-Item "C:\Program Files\Adobe\Acrobat DC\Acrobat\Acrobat.exe" |
   Select-Object FullName, @{Name="FileVersion";Expression={$_.VersionInfo.FileVersion}}
+
+
+
+6 #########################################
+
+👇 Passo 1/2 – Regra de detecção no SCCM
+
+Na aba Detection Method do teu aplicativo:
+
+Add Clause
+
+Setting type: File System
+
+Type: File
+
+Path:
+
+C:\Program Files\Adobe\Acrobat DC\Acrobat
+
+
+File or folder name:
+
+Acrobat.exe
+
+
+Marcar: “This file or folder is associated with a 32-bit application on 64-bit systems” → NÃO marca, porque está em Program Files (x64).
+
+Em Detection rule:
+
+seleciona “The file system setting must satisfy the following rule…”
+
+Property: Version
+
+Operator: Equals
+
+Value:
+
+25.1.20756.0
