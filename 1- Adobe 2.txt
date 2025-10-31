@@ -93,3 +93,27 @@ Operator: Equals
 Value:
 
 25.1.20756.0
+
+
+7 ####################################################
+
+Get-WmiObject -Class Win32_Product |
+  Where-Object { $_.Name -like "Adobe*Acrobat*" -or $_.Name -like "Adobe*Reader*" } |
+  Select-Object Name, Version, IdentifyingNumber
+
+
+
+
+Get-Item "C:\temp\4n\AcroRdrDCUpd2500120756.*" | 
+  Select-Object FullName, Name, Length, @{Name="FileVersion";Expression={$_.VersionInfo.FileVersion}}
+
+
+
+
+Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*" ,
+                 "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*" `
+  -ErrorAction SilentlyContinue |
+  Where-Object { $_.DisplayName -like "Adobe*Acrobat*" -or $_.DisplayName -like "Adobe*Reader*" } |
+  Select-Object DisplayName, DisplayVersion, PSChildName
+
+
