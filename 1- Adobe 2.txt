@@ -25,3 +25,19 @@ foreach ($p in $paths) {
   ForEach-Object { Get-ChildItem $_ -ErrorAction SilentlyContinue } |
   ForEach-Object { Get-ItemProperty $_.PsPath -ErrorAction SilentlyContinue } |
   Select-Object PSChildName, InstallPath, Path
+
+
+
+
+3#################################
+$paths = @(
+  "C:\Program Files\Adobe\Acrobat DC\Acrobat\Acrobat.exe",
+  "C:\Program Files (x86)\Adobe\Acrobat DC\Acrobat\Acrobat.exe"
+)
+
+foreach ($p in $paths) {
+    if (Test-Path $p) {
+        Get-Item $p | Select-Object FullName, @{Name="FileVersion";Expression={$_.VersionInfo.FileVersion}}
+    }
+}
+
