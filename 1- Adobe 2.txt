@@ -48,3 +48,10 @@ foreach ($p in $paths) {
 Get-WmiObject -Class Win32_Product |
   Where-Object { $_.Name -like "Adobe*Acrobat*" -or $_.Name -like "Adobe*Reader*" } |
   Select-Object Name, Version, IdentifyingNumber
+
+
+
+5 ###################################
+
+Get-Item "C:\Program Files\Adobe\Acrobat DC\Acrobat\Acrobat.exe" |
+  Select-Object FullName, @{Name="FileVersion";Expression={$_.VersionInfo.FileVersion}}
