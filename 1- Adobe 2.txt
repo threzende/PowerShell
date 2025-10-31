@@ -124,3 +124,10 @@ Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*" ,
 "C:\Program Files\Common Files\Adobe\ARM\1.0\AdobeARM.exe" /product=1 /update=1
 
 
+
+9 #############################################
+Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*" |
+Where-Object { $_.DisplayName -like "*Adobe*" } |
+Select-Object DisplayName, InstallLocation
+
+
