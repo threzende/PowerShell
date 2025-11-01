@@ -1,0 +1,123 @@
+1 ######################################
+
+# ============================
+# SCCM CLIENT SNAPSHOT (read-only)
+# Vai gerar: C:\temp\sccm\client-sccm-snapshot.txt
+# ============================
+
+$OutDir  = 'C:\temp\sccm'
+$OutFile = Join-Path $OutDir 'client-sccm-snapshot.txt'
+
+# cria pasta se não existir
+if (-not (Test-Path $OutDir)) {
+    New-Item -ItemType Directory -Path $OutDir -Force | Out-Null
+}
+
+# dicionário das collections padrão que queremos destacar
+$wellKnown = @{
+    'SMS00001' = 'All Systems (padrão do SCCM)';
+    'SMSDM003' = 'All Desktop and Server Clients (padrão do SCCM)';
+}
+
+# funçãozinha pra pegar últimas linhas de log
+function Get-LastLines {
+    param(
+        [string]$Path,
+        [int]$Lines = 200
+    )
+    if (Test-Path $Path) {
+        return Get-Content -Path $Path -Tail $Lines -ErrorAction SilentlyContinue
+    } else {
+        return @("**LOG não encontrado: $Path**")
+    }
+}
+
+$logDir = Join-Path $env:WINDIR 'CCM\Logs'
+$logs = @{
+    PolicyAgent     = Join-Path $logDir 'PolicyAgent.log'
+    PolicyEvaluator = Join-Path $logDir 'PolicyEvaluator.log'
+    AppDiscovery    = Join-Path $logDir 'AppDiscovery.log'
+    AppEnforce      = Join-Path $logDir 'AppEnforce.log'
+    ExecMgr         = Join-Path $logDir 'ExecMgr.log'
+}
+
+# começa o arquivo
+"===== SCCM CLIENT SNAPSHOT =====" | Out-File -FilePath $OutFile -Encoding UTF8
+"Máquina : $env:COMPUTERNAME"     | Out-File -FilePath $OutFile -Append
+"Data    : $(Get-Date)"          | Out-File -FilePath $OutFile -Append
+""                                | Out-File -FilePath $OutFile -Append
+
+# 1) Collections vistas pelo CLIENTE
+"--- Collections (WMI: root\ccm\policy\machine\actualconfig) ---" | Out-File $OutFile -Append
+try {
+    $cols = Get-WmiObject -Namespace root\ccm\policy\machine\actualconfig -Class CCM_CollectionMembership |
+            Sort-Object CollectionID
+    if ($cols) {
+        foreach ($c in $cols) {
+            $extra = ""
+            if ($wellKnown.ContainsKey($c.CollectionID)) {
+                $extra = "  <-- " + $wellKnown[$c.CollectionID]
+            }
+            ("{0}  {1}{2}" -f $c.CollectionID, $c.CollectionName, $extra) | Out-File $OutFile -Append
+        }
+    } else {
+        "(nenhuma collection retornada)" | Out-File $OutFile -Append
+    }
+} catch {
+    "ERRO lendo WMI: $_" | Out-File $OutFile -Append
+}
+"" | Out-File $OutFile -Append
+
+# 2) PolicyAgent.log
+"--- PolicyAgent.log (políticas recebidas) ---" | Out-File $OutFile -Append
+Get-LastLines -Path $logs.PolicyAgent -Lines 400 |
+    Select-String -SimpleMatch @("Received policy assignment","Downloading policy","Policy download completed") |
+    Select-Object -Last 120 |
+    ForEach-Object { $_.Line } |
+    Out-File $OutFile -Append
+"" | Out-File $OutFile -Append
+
+# 3) PolicyEvaluator.log
+"--- PolicyEvaluator.log (avaliação de policy) ---" | Out-File $OutFile -Append
+Get-LastLines -Path $logs.PolicyEvaluator -Lines 300 |
+    Select-String -Pattern "Evaluat|Compliant|NonCompliant|will be enforced" |
+    Select-Object -Last 80 |
+    ForEach-Object { $_.Line } |
+    Out-File $OutFile -Append
+"" | Out-File $OutFile -Append
+
+# 4) AppDiscovery.log
+"--- AppDiscovery.log (aplicações detectadas) ---" | Out-File $OutFile -Append
+Get-LastLines -Path $logs.AppDiscovery -Lines 200 |
+    Select-String -Pattern "Discovery for application|Detection" |
+    Select-Object -Last 50 |
+    ForEach-Object { $_.Line } |
+    Out-File $OutFile -Append
+"" | Out-File $OutFile -Append
+
+# 5) AppEnforce.log
+"--- AppEnforce.log (instalações de app) ---" | Out-File $OutFile -Append
+Get-LastLines -Path $logs.AppEnforce -Lines 200 |
+    Select-String -Pattern "Prepared command line|Starting install|Successfully|Failed" |
+    Select-Object -Last 80 |
+    ForEach-Object { $_.Line } |
+    Out-File $OutFile -Append
+"" | Out-File $OutFile -Append
+
+# 6) ExecMgr.log
+"--- ExecMgr.log (pacotes/programas/TS) ---" | Out-File $OutFile -Append
+Get-LastLines -Path $logs.ExecMgr -Lines 200 |
+    Select-String -Pattern "executing|program started|Raised program completion|Install completion" |
+    Select-Object -Last 80 |
+    ForEach-Object { $_.Line } |
+    Out-File $OutFile -Append
+"" | Out-File $OutFile -Append
+
+"===== FIM =====" | Out-File $OutFile -Append
+
+Write-Host "Pronto. Gerado em: $OutFile"
+
+
+
+2 #############################
+
