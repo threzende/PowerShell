@@ -1,34 +1,28 @@
 1 ######################################
 
 # ============================
-# SCCM CLIENT SNAPSHOT (read-only)
-# Vai gerar: C:\temp\sccm\client-sccm-snapshot.txt
+# SCCM CLIENT SNAPSHOT v2 (read-only)
 # ============================
 
 $OutDir  = 'C:\temp\sccm'
 $OutFile = Join-Path $OutDir 'client-sccm-snapshot.txt'
+$Width   = 200
 
-# cria pasta se não existir
 if (-not (Test-Path $OutDir)) {
     New-Item -ItemType Directory -Path $OutDir -Force | Out-Null
 }
 
-# dicionário das collections padrão que queremos destacar
-$wellKnown = @{
-    'SMS00001' = 'All Systems (padrão do SCCM)';
-    'SMSDM003' = 'All Desktop and Server Clients (padrão do SCCM)';
+function Write-Line {
+    param([string]$Text = "")
+    $Text | Out-File -FilePath $OutFile -Append -Encoding UTF8 -Width $Width
 }
 
-# funçãozinha pra pegar últimas linhas de log
 function Get-LastLines {
-    param(
-        [string]$Path,
-        [int]$Lines = 200
-    )
+    param([string]$Path, [int]$Lines = 200)
     if (Test-Path $Path) {
-        return Get-Content -Path $Path -Tail $Lines -ErrorAction SilentlyContinue
+        Get-Content -Path $Path -Tail $Lines -ErrorAction SilentlyContinue
     } else {
-        return @("**LOG não encontrado: $Path**")
+        "**LOG não encontrado: $Path**"
     }
 }
 
@@ -41,81 +35,80 @@ $logs = @{
     ExecMgr         = Join-Path $logDir 'ExecMgr.log'
 }
 
-# começa o arquivo
-"===== SCCM CLIENT SNAPSHOT =====" | Out-File -FilePath $OutFile -Encoding UTF8
-"Máquina : $env:COMPUTERNAME"     | Out-File -FilePath $OutFile -Append
-"Data    : $(Get-Date)"          | Out-File -FilePath $OutFile -Append
-""                                | Out-File -FilePath $OutFile -Append
+"===== SCCM CLIENT SNAPSHOT =====" | Out-File $OutFile -Encoding UTF8
+Write-Line "Máquina : $env:COMPUTERNAME"
+Write-Line "Data    : $(Get-Date)"
+Write-Line ""
 
-# 1) Collections vistas pelo CLIENTE
-"--- Collections (WMI: root\ccm\policy\machine\actualconfig) ---" | Out-File $OutFile -Append
+# 1) Collections do CLIENTE (se a classe existir)
+Write-Line "--- Collections (WMI: root\ccm\policy\machine\actualconfig) ---"
+$ns = 'root\ccm\policy\machine\actualconfig'
+$colClassExists = $false
 try {
-    $cols = Get-WmiObject -Namespace root\ccm\policy\machine\actualconfig -Class CCM_CollectionMembership |
-            Sort-Object CollectionID
-    if ($cols) {
-        foreach ($c in $cols) {
-            $extra = ""
-            if ($wellKnown.ContainsKey($c.CollectionID)) {
-                $extra = "  <-- " + $wellKnown[$c.CollectionID]
-            }
-            ("{0}  {1}{2}" -f $c.CollectionID, $c.CollectionName, $extra) | Out-File $OutFile -Append
-        }
-    } else {
-        "(nenhuma collection retornada)" | Out-File $OutFile -Append
+    $c = Get-CimClass -Namespace $ns -ClassName 'CCM_CollectionMembership' -ErrorAction Stop
+    if ($c) { $colClassExists = $true }
+} catch {}
+
+if ($colClassExists) {
+    $cols = Get-CimInstance -Namespace $ns -ClassName 'CCM_CollectionMembership' | Sort-Object CollectionID
+    foreach ($c in $cols) {
+        # compacta múltiplos espaços
+        $line = ("{0}  {1}" -f $c.CollectionID, $c.CollectionName) -replace '\s{2,}',' '
+        Write-Line $line
     }
-} catch {
-    "ERRO lendo WMI: $_" | Out-File $OutFile -Append
+} else {
+    Write-Line "(classe CCM_CollectionMembership não existe no cliente neste momento)"
 }
-"" | Out-File $OutFile -Append
+Write-Line ""
 
-# 2) PolicyAgent.log
-"--- PolicyAgent.log (políticas recebidas) ---" | Out-File $OutFile -Append
-Get-LastLines -Path $logs.PolicyAgent -Lines 400 |
-    Select-String -SimpleMatch @("Received policy assignment","Downloading policy","Policy download completed") |
-    Select-Object -Last 120 |
-    ForEach-Object { $_.Line } |
-    Out-File $OutFile -Append
-"" | Out-File $OutFile -Append
+# 2) PolicyAgent.log – mostrar só linhas de policy, enxutas
+Write-Line "--- PolicyAgent.log (políticas recebidas) ---"
+Get-LastLines -Path $logs.PolicyAgent -Lines 300 |
+    Where-Object { $_ -match 'policy' } |
+    ForEach-Object {
+        # tira espaços exagerados
+        ($_ -replace '\s{2,}', ' ')
+    } | Select-Object -Last 80 |
+    ForEach-Object { Write-Line $_ }
+Write-Line ""
 
-# 3) PolicyEvaluator.log
-"--- PolicyEvaluator.log (avaliação de policy) ---" | Out-File $OutFile -Append
-Get-LastLines -Path $logs.PolicyEvaluator -Lines 300 |
-    Select-String -Pattern "Evaluat|Compliant|NonCompliant|will be enforced" |
-    Select-Object -Last 80 |
-    ForEach-Object { $_.Line } |
-    Out-File $OutFile -Append
-"" | Out-File $OutFile -Append
+# 3) PolicyEvaluator.log – extrair só GUIDs de policy
+Write-Line "--- PolicyEvaluator.log (avaliação de policy) ---"
+$pols = Get-LastLines -Path $logs.PolicyEvaluator -Lines 300 |
+    Where-Object { $_ -match 'Applying policy' }
 
-# 4) AppDiscovery.log
-"--- AppDiscovery.log (aplicações detectadas) ---" | Out-File $OutFile -Append
-Get-LastLines -Path $logs.AppDiscovery -Lines 200 |
-    Select-String -Pattern "Discovery for application|Detection" |
-    Select-Object -Last 50 |
-    ForEach-Object { $_.Line } |
-    Out-File $OutFile -Append
-"" | Out-File $OutFile -Append
+if ($pols) {
+    $clean = @()
+    foreach ($p in $pols) {
+        if ($p -match '\{[0-9A-Fa-f-]+\}') {
+            $clean += $matches[0]
+        }
+    }
+    $clean | Select-Object -Unique | ForEach-Object { Write-Line $_ }
+} else {
+    Write-Line "(nenhuma linha de Applying policy encontrada)"
+}
+Write-Line ""
 
-# 5) AppEnforce.log
-"--- AppEnforce.log (instalações de app) ---" | Out-File $OutFile -Append
+# 4) AppEnforce.log – o que instalou
+Write-Line "--- AppEnforce.log (instalação de app) ---"
 Get-LastLines -Path $logs.AppEnforce -Lines 200 |
-    Select-String -Pattern "Prepared command line|Starting install|Successfully|Failed" |
-    Select-Object -Last 80 |
-    ForEach-Object { $_.Line } |
-    Out-File $OutFile -Append
-"" | Out-File $OutFile -Append
+    Where-Object { $_ -match 'Starting install|Successfully|Failed|Prepared command line' } |
+    ForEach-Object { ($_ -replace '\s{2,}',' ') } |
+    ForEach-Object { Write-Line $_ }
+Write-Line ""
 
-# 6) ExecMgr.log
-"--- ExecMgr.log (pacotes/programas/TS) ---" | Out-File $OutFile -Append
+# 5) ExecMgr.log – pacotes/TS
+Write-Line "--- ExecMgr.log (pacotes/programas/TS) ---"
 Get-LastLines -Path $logs.ExecMgr -Lines 200 |
-    Select-String -Pattern "executing|program started|Raised program completion|Install completion" |
-    Select-Object -Last 80 |
-    ForEach-Object { $_.Line } |
-    Out-File $OutFile -Append
-"" | Out-File $OutFile -Append
+    Where-Object { $_ -match 'executing|program started|Raised program completion|Install completion' } |
+    ForEach-Object { ($_ -replace '\s{2,}',' ') } |
+    ForEach-Object { Write-Line $_ }
+Write-Line ""
 
-"===== FIM =====" | Out-File $OutFile -Append
-
+Write-Line "===== FIM ====="
 Write-Host "Pronto. Gerado em: $OutFile"
+
 
 
 
