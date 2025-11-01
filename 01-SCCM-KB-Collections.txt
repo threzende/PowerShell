@@ -113,4 +113,41 @@ Write-Host "Pronto. Gerado em: $OutFile"
 
 
 2 #############################
+# ===== SCCM SNAPSHOT v3 (super seco) =====
+$base = 'C:\temp\sccm'
+if (-not (Test-Path $base)) {
+    New-Item -Path $base -ItemType Directory -Force | Out-Null
+}
 
+$logDir = Join-Path $env:WINDIR 'CCM\Logs'
+$polFile  = Join-Path $base 'policies.txt'
+$appsFile = Join-Path $base 'apps.txt'
+
+# 1) POLICIES (pega só os GUIDs únicos)
+$polLines = Get-Content (Join-Path $logDir 'PolicyEvaluator.log') -Tail 600 -ErrorAction SilentlyContinue
+$guids = @()
+foreach ($l in $polLines) {
+    if ($l -match '\{[0-9A-Fa-f-]+\}') {
+        $guids += $matches[0]
+    }
+}
+$guids | Sort-Object -Unique | Set-Content -Path $polFile -Encoding UTF8
+
+# 2) APPS (descoberta + instalação)
+$appDisc  = Get-Content (Join-Path $logDir 'AppDiscovery.log') -Tail 200 -ErrorAction SilentlyContinue |
+            Select-String -Pattern 'Carbon Black|Performing detection of app deployment type|application' -SimpleMatch
+$appEnf   = Get-Content (Join-Path $logDir 'AppEnforce.log') -Tail 200 -ErrorAction SilentlyContinue |
+            Select-String -Pattern 'Starting install enforcement for App DT|Prepared command line' -SimpleMatch
+
+"--- AppDiscovery ---" | Set-Content -Path $appsFile -Encoding UTF8
+$appDisc | ForEach-Object { $_.Line -replace '\s{2,}',' ' } | Add-Content -Path $appsFile
+"--- AppEnforce ---"  | Add-Content -Path $appsFile
+$appEnf  | ForEach-Object { $_.Line -replace '\s{2,}',' ' } | Add-Content -Path $appsFile
+
+Write-Host "Gerado:"
+Write-Host " - $polFile"
+Write-Host " - $appsFile"
+
+
+
+3 ##########################
