@@ -155,3 +155,109 @@ Write-Host " - $appsFile"
 
 and SMS_R_System.Name <> "CLDCP0004T"
 
+
+
+4 ##########################################################
+
+# ===== SCCM SolarWinds Trace =====
+$base   = 'C:\temp\sccm'
+$out    = Join-Path $base 'solarwinds-trace.txt'
+$width  = 220
+
+if (-not (Test-Path $base)) {
+    New-Item -ItemType Directory -Path $base -Force | Out-Null
+}
+
+function Add-Line {
+    param([string]$Text = "")
+    $Text | Out-File -FilePath $out -Append -Encoding UTF8 -Width $width
+}
+
+"===== SCCM SolarWinds Trace =====" | Out-File -FilePath $out -Encoding UTF8
+Add-Line "Máquina : $env:COMPUTERNAME"
+Add-Line "Data    : $(Get-Date)"
+Add-Line ""
+
+$logDir = Join-Path $env:WINDIR 'CCM\Logs'
+
+# palavras que vamos caçar (case-insensitive)
+$keywords = @(
+    'solar',
+    'solarwinds',
+    'orion',
+    'n-able',
+    'nable',
+    'ncentral',
+    'n-central',
+    'swis',
+    'serv-u'
+)
+
+# função pra filtrar um log
+function Dump-Log {
+    param(
+        [string]$Name,
+        [string]$Path,
+        [int]$Tail = 500
+    )
+    Add-Line "--- $Name ($Path) ---"
+
+    if (-not (Test-Path $Path)) {
+        Add-Line "(log não encontrado)"
+        Add-Line ""
+        return
+    }
+
+    $lines = Get-Content -Path $Path -Tail $Tail -ErrorAction SilentlyContinue
+    $hits  = @()
+
+    foreach ($l in $lines) {
+        foreach ($k in $keywords) {
+            if ($l -match [regex]::Escape($k)) {
+                # tira espaços gigantes pra facilitar print
+                $hits += ($l -replace '\s{2,}',' ')
+                break
+            }
+        }
+    }
+
+    if ($hits.Count -gt 0) {
+        $hits | Sort-Object -Unique | ForEach-Object { Add-Line $_ }
+    } else {
+        Add-Line "(nenhuma linha com SolarWinds/Orion/N-able/etc)"
+    }
+
+    Add-Line ""
+}
+
+Dump-Log -Name "AppDiscovery.log"       -Path (Join-Path $logDir 'AppDiscovery.log')
+Dump-Log -Name "AppEnforce.log"         -Path (Join-Path $logDir 'AppEnforce.log')
+Dump-Log -Name "ExecMgr.log"            -Path (Join-Path $logDir 'ExecMgr.log')
+Dump-Log -Name "PolicyAgent.log"        -Path (Join-Path $logDir 'PolicyAgent.log')      -Tail 800
+Dump-Log -Name "PolicyEvaluator.log"    -Path (Join-Path $logDir 'PolicyEvaluator.log')  -Tail 800
+Dump-Log -Name "CAS.log"                -Path (Join-Path $logDir 'CAS.log')              -Tail 400
+Dump-Log -Name "DataTransferService.log"-Path (Join-Path $logDir 'DataTransferService.log') -Tail 400
+
+# tentar ver aplicações do client SDK com nome de solarwinds
+Add-Line "--- WMI (root\\ccm\\ClientSDK) - apps com 'solar' no nome ---"
+try {
+    $apps = Get-CimInstance -Namespace root\ccm\ClientSDK -ClassName CCM_Application -ErrorAction Stop |
+        Where-Object { $_.LocalizedDisplayName -match 'solar|orion|n-able|nable|ncentral' }
+
+    if ($apps) {
+        foreach ($a in $apps) {
+            Add-Line ("Name: {0} | CI_ID: {1} | Revision: {2}" -f $a.LocalizedDisplayName, $a.CI_ID, $a.Revision)
+        }
+    } else {
+        Add-Line "(nenhuma app relacionada encontrada no ClientSDK)"
+    }
+}
+catch {
+    Add-Line "(não foi possível consultar root\\ccm\\ClientSDK\\CCM_Application – classe pode não existir neste cliente)"
+}
+
+Add-Line "===== FIM ====="
+Write-Host "Gerado em: $out"
+
+
+5 #########################################
