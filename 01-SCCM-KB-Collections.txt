@@ -261,3 +261,59 @@ Write-Host "Gerado em: $out"
 
 
 5 #########################################
+
+
+# ===== SCCM SolarWinds Policy Dump (com versão) =====
+$base = 'C:\temp\sccm'
+if (-not (Test-Path $base)) {
+    New-Item -ItemType Directory -Path $base -Force | Out-Null
+}
+
+# acha o próximo número: v1, v2, v3...
+$idx = 1
+do {
+    $out = Join-Path $base ("solarwinds-policy_v{0}.txt" -f $idx)
+    $idx++
+} while (Test-Path $out)
+
+$ns = 'root\ccm\policy\machine\actualconfig'
+
+# IDs vistos no log
+$PackageId = 'A03002C6'
+$AdvertId  = 'A0300206C'
+
+"===== SCCM SolarWinds Policy Dump ====="      | Out-File $out -Encoding UTF8
+"Arquivo : $out"                               | Out-File $out -Append -Encoding UTF8
+"Máquina : $env:COMPUTERNAME"                  | Out-File $out -Append -Encoding UTF8
+"Data    : $(Get-Date)"                        | Out-File $out -Append -Encoding UTF8
+"Procurando por: $PackageId e $AdvertId"       | Out-File $out -Append -Encoding UTF8
+""                                             | Out-File $out -Append -Encoding UTF8
+
+try {
+    $classes = Get-WmiObject -Namespace $ns -List -ErrorAction Stop
+}
+catch {
+    "NÃO consegui listar classes em $ns" | Out-File $out -Append
+    Write-Host "Gerado em: $out"
+    return
+}
+
+foreach ($c in $classes) {
+    try {
+        $inst = Get-WmiObject -Namespace $ns -Class $c.Name -ErrorAction Stop
+    } catch { continue }
+
+    foreach ($i in $inst) {
+        $txt = $i | Out-String
+        if ($txt -like "*$PackageId*" -or $txt -like "*$AdvertId*") {
+            "---- Classe: {0} ----" -f $c.Name | Out-File $out -Append
+            $txt | Out-File $out -Append
+            ""   | Out-File $out -Append
+        }
+    }
+}
+
+"===== FIM =====" | Out-File $out -Append
+Write-Host "Gerado em: $out"
+
+6 #####################################################
