@@ -153,4 +153,5 @@ Write-Host " - $appsFile"
 3 ##########################
 
 
-AA
+and SMS_R_System.Name <> "CLDCP0004T"
+
