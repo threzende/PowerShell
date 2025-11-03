@@ -17,3 +17,10 @@ Select-Object DisplayName, PSChildName
 
 
 2 ################################################################################
+
+
+msiexec /i "C:\Windows\ccmcache\7\SolarWinds-Agent.msi" TRANSFORMS="C:\Windows\ccmcache\7\SolarWinds-Agent.mst" /L*v C:\Temp\swagent.log
+
+
+
+3 ################################################################################
