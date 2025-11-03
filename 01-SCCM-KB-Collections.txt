@@ -629,3 +629,74 @@ Write-Host "Gerado: $OutFile"
 
 
 11 #######################################################################################
+
+# ===== SCCM SolarWinds DP Trace (v6) =====
+$Base   = 'C:\temp\sccm'
+$PkgId  = 'A03002C6'
+$Out    = Join-Path $Base ("solarwinds-dp_v6_{0:yyyyMMdd_HHmmss}.txt" -f (Get-Date))
+
+if (-not (Test-Path $Base)) { New-Item -ItemType Directory -Path $Base -Force | Out-Null }
+
+"===== SCCM SolarWinds DP Trace (v6) =====" | Out-File $Out -Encoding UTF8
+"Máquina : $env:COMPUTERNAME"               | Out-File $Out -Append
+"Data    : $(Get-Date)"                     | Out-File $Out -Append
+"Pacote  : $PkgId"                          | Out-File $Out -Append
+""                                          | Out-File $Out -Append
+
+# logs que podem ter o DP
+$logPaths = @(
+    'C:\Windows\CCM\Logs\CAS.log',
+    'C:\Windows\CCM\Logs\CAS.lo_',
+    'C:\Windows\CCM\Logs\DataTransferService.log',
+    'C:\Windows\CCM\Logs\DataTransferService.lo_',
+    'C:\Windows\CCM\Logs\ContentTransferManager.log',
+    'C:\Windows\CCM\Logs\ContentTransferManager.lo_',
+    'C:\Windows\CCM\Logs\LocationServices.log',
+    'C:\Windows\CCM\Logs\LocationServices.lo_'
+)
+
+$foundLines = @()
+foreach ($p in $logPaths) {
+    if (-not (Test-Path $p)) { continue }
+
+    # se for .lo_ ele vem comprimido, então tenta expandir na hora
+    if ($p -like '*.lo_') {
+        try {
+            $tmp = Join-Path $env:TEMP ([IO.Path]::GetFileNameWithoutExtension($p) + "_tmp.log")
+            expand $p $tmp -F:* | Out-Null
+            $lines = Get-Content $tmp -ErrorAction SilentlyContinue
+            Remove-Item $tmp -ErrorAction SilentlyContinue
+        } catch {
+            continue
+        }
+    } else {
+        $lines = Get-Content $p -ErrorAction SilentlyContinue
+    }
+
+    $hits = $lines | Where-Object {
+        ($_ -like "*$PkgId*") -and (
+            $_ -like "*DistributionPoint*" -or
+            $_ -like "*SMS_DP_SMSPKG$/$PkgId*" -or
+            $_ -like "*http*://*${PkgId}*" -or
+            $_ -like "*https*://*${PkgId}*"
+        )
+    }
+
+    if ($hits) {
+        "---- $p ----" | Out-File $Out -Append
+        $hits | Out-File $Out -Append
+        "" | Out-File $Out -Append
+        $foundLines += $hits
+    }
+}
+
+if (-not $foundLines) {
+    "NÃO achei nenhuma linha com o DP pros logs atuais / antigos." | Out-File $Out -Append
+    "Provável motivo: as linhas já rodaram (log girou) ou o cliente pegou do primeiro DP e só registrou no LocationServices.log." | Out-File $Out -Append
+}
+
+"===== FIM =====" | Out-File $Out -Append
+Write-Host "Gerado: $Out"
+
+
+12 #######################################################################################
