@@ -24,3 +24,12 @@ msiexec /i "C:\Windows\ccmcache\7\SolarWinds-Agent.msi" TRANSFORMS="C:\Windows\c
 
 
 3 ################################################################################
+
+Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*',
+                 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*' |
+Where-Object { $_.DisplayName -like '*SolarWinds*' } |
+Select-Object DisplayName, PSChildName, DisplayVersion
+
+
+
+4 ################################################################################
