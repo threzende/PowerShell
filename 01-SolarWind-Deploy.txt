@@ -33,3 +33,14 @@ Select-Object DisplayName, PSChildName, DisplayVersion
 
 
 4 ################################################################################
+
+
+Get-ChildItem 'C:\Program Files (x86)\SolarWinds\Agent' -File |
+  Select-Object Name, @{n='FileVersion';e={$_.VersionInfo.FileVersion}} |
+  Sort-Object Name
+
+
+
+
+
+5 ################################################################################
