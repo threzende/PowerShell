@@ -441,3 +441,70 @@ Write-Host "Gerado em: $outFile"
 
 
 8 #####################################################################
+
+
+
+param(
+    [string]$PackageId = 'A03002C6',      # troca se quiser
+    [int]$Tail = 2000                     # quantas linhas do fim do log vamos olhar
+)
+
+$base = 'C:\temp\sccm'
+$ts   = Get-Date -Format 'yyyyMMdd_HHmmss'
+$out  = Join-Path $base "solarwinds-dp_$($PackageId)_$ts.txt"
+
+if (-not (Test-Path $base)) { New-Item -ItemType Directory -Path $base -Force | Out-Null }
+
+$logs = @(
+    "$env:windir\CCM\Logs\CAS.log",
+    "$env:windir\CCM\Logs\ContentTransferManager.log",
+    "$env:windir\CCM\Logs\DataTransferService.log",
+    "$env:windir\CCM\Logs\LocationServices.log"
+)
+
+"===== SCCM SolarWinds DP Trace (v3) =====" | Out-File $out -Encoding UTF8
+"Máquina : $env:COMPUTERNAME"            | Out-File $out -Append
+"Data    : $(Get-Date)"                  | Out-File $out -Append
+"Pacote  : $PackageId"                   | Out-File $out -Append
+""                                       | Out-File $out -Append
+
+$foundLines = @()
+$dps        = @()
+
+foreach ($log in $logs) {
+    if (-not (Test-Path $log)) { continue }
+
+    $lines = Get-Content $log -Tail $Tail
+    $hits  = $lines | Where-Object { $_ -like "*$PackageId*" }
+
+    foreach ($h in $hits) {
+        # tenta pegar o DP
+        if ($h -match 'DistributionPoint=(?<url>https?://\S+)') {
+            $url = $Matches.url
+            # corta só o servidor
+            if ($url -match 'https?://([^/]+)') {
+                $dps += $Matches[1]
+            } else {
+                $dps += $url
+            }
+        }
+        $foundLines += "[$([System.IO.Path]::GetFileName($log))] $h"
+    }
+}
+
+"--- DPs que apareceram ---"            | Out-File $out -Append
+($dps | Sort-Object -Unique)            | Out-File $out -Append
+""                                      | Out-File $out -Append
+"--- Linhas de origem ---"              | Out-File $out -Append
+$foundLines                              | Out-File $out -Append
+
+"===== FIM ====="                        | Out-File $out -Append
+Write-Host "Gerado em: $out"
+
+
+
+
+
+
+
+9 #########################################################################################
