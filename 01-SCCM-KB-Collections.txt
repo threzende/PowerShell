@@ -375,3 +375,69 @@ Write-Host "Gerado em: $OutFile"
 
 
 7 #####################################################################
+
+# ===== SCCM SolarWinds DP Trace (v2) =====
+$base   = 'C:\temp\sccm'
+$pkgId  = 'A03002C6'     # SolarWinds Test
+$prefix = 'solarwinds-dp'
+$logs   = @(
+    'C:\Windows\CCM\Logs\DataTransferService.log',
+    'C:\Windows\CCM\Logs\ContentTransferManager.log',
+    'C:\Windows\CCM\Logs\CAS.log'
+)
+
+if (-not (Test-Path $base)) {
+    New-Item -ItemType Directory -Path $base -Force | Out-Null
+}
+
+# gera nome v1, v2, v3...
+$i = 1
+do {
+    $outFile = Join-Path $base ("{0}_v{1}.txt" -f $prefix, $i)
+    $i++
+} while (Test-Path $outFile)
+
+"===== SCCM SolarWinds DP Trace (v2) =====" | Out-File $outFile -Encoding UTF8
+"Máquina : $env:COMPUTERNAME"           | Out-File $outFile -Append
+"Data    : $(Get-Date)"                 | Out-File $outFile -Append
+"Pacote  : $pkgId"                      | Out-File $outFile -Append
+""                                      | Out-File $outFile -Append
+
+$found = @()
+
+foreach ($log in $logs) {
+    if (-not (Test-Path $log)) { continue }
+
+    # pega SÓ as últimas ocorrências do pacote nesse log
+    $hits = Select-String -Path $log -Pattern $pkgId -SimpleMatch | Sort-Object LineNumber -Descending | Select-Object -First 5
+    if (-not $hits) { continue }
+
+    "---- $log ----" | Out-File $outFile -Append
+
+    foreach ($h in $hits) {
+        # pega umas linhas ao redor
+        $block = Get-Content $log | Select-Object -Skip ($h.LineNumber-5) -First 15
+        $block | Out-File $outFile -Append
+
+        # tenta achar URL / UNC de DP
+        $dp = $block | Select-String -Pattern 'http://','https://','\\\\' | Select-Object -First 1
+        if ($dp) {
+            $found += $dp.Line.Trim()
+        }
+
+        "" | Out-File $outFile -Append
+    }
+}
+
+"--- DPs mais prováveis ---" | Out-File $outFile -Append
+$found | Sort-Object -Unique | Out-File $outFile -Append
+
+"===== FIM =====" | Out-File $outFile -Append
+Write-Host "Gerado em: $outFile"
+
+
+
+
+
+
+8 #####################################################################
