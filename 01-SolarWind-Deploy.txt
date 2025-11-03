@@ -44,3 +44,9 @@ Get-ChildItem 'C:\Program Files (x86)\SolarWinds\Agent' -File |
 
 
 5 ################################################################################
+
+
+Get-Service *SolarWinds* | Select Name, DisplayName, Status, StartType
+
+6 ################################################################################
+
