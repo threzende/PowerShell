@@ -317,3 +317,61 @@ foreach ($c in $classes) {
 Write-Host "Gerado em: $out"
 
 6 #####################################################
+
+
+# ===== SCCM SolarWinds DP Trace =====
+$Base   = 'C:\temp\sccm'
+$PkgId  = 'A03002C6'          # SolarWinds Test
+$AdvId  = 'A0300206C'         # o advertisement que apareceu no log
+$Prefix = 'solarwinds-dp'
+$Logs   = @(
+    'C:\Windows\CCM\Logs\LocationServices.log',
+    'C:\Windows\CCM\Logs\CAS.log',
+    'C:\Windows\CCM\Logs\ContentTransferManager.log',
+    'C:\Windows\CCM\Logs\DataTransferService.log'
+)
+
+if (-not (Test-Path $Base)) {
+    New-Item -ItemType Directory -Path $Base -Force | Out-Null
+}
+
+# gera nome v1, v2, v3...
+$i = 1
+do {
+    $OutFile = Join-Path $Base ("{0}_v{1}.txt" -f $Prefix, $i)
+    $i++
+} while (Test-Path $OutFile)
+
+"===== SCCM SolarWinds DP Trace =====" | Out-File $OutFile -Encoding UTF8
+"Máquina : $env:COMPUTERNAME"          | Out-File $OutFile -Append
+"Data    : $(Get-Date)"                | Out-File $OutFile -Append
+"Pacote  : $PkgId"                     | Out-File $OutFile -Append
+"Advert  : $AdvId"                     | Out-File $OutFile -Append
+""                                     | Out-File $OutFile -Append
+
+foreach ($log in $Logs) {
+    if (-not (Test-Path $log)) { continue }
+
+    "---- LOG: $log ----" | Out-File $OutFile -Append
+    # pega linhas que têm o pacote ou o advert
+    $lines = Select-String -Path $log -Pattern $PkgId,$AdvId -SimpleMatch -ErrorAction SilentlyContinue
+
+    if (-not $lines) {
+        "(nenhuma linha com o pacote)" | Out-File $OutFile -Append
+        "" | Out-File $OutFile -Append
+        continue
+    }
+
+    # joga umas linhas extras ao redor pra ver a URL do DP
+    foreach ($l in $lines) {
+        "---- linha {0} ----" -f $l.LineNumber | Out-File $OutFile -Append
+        Get-Content $log | Select-Object -Skip ($l.LineNumber-5) -First 11 | Out-File $OutFile -Append
+        "" | Out-File $OutFile -Append
+    }
+}
+
+"===== FIM =====" | Out-File $OutFile -Append
+Write-Host "Gerado em: $OutFile"
+
+
+7 #####################################################################
