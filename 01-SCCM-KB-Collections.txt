@@ -568,3 +568,64 @@ Write-Host "Gerado: $OutFile"
 
 
 10 #######################################################################################
+
+# ===== SCCM SolarWinds DP Trace (v5) =====
+$Base     = 'C:\temp\sccm'
+$PkgId    = 'A03002C6'  # seu pacote
+$OutFile  = Join-Path $Base ("solarwinds-dp_v5_{0:yyyyMMdd_HHmmss}.txt" -f (Get-Date))
+
+$CasLog   = 'C:\Windows\CCM\Logs\CAS.log'
+$LocLog   = 'C:\Windows\CCM\Logs\LocationServices.log'
+
+if (-not (Test-Path $Base)) { New-Item -ItemType Directory -Path $Base -Force | Out-Null }
+
+"===== SCCM SolarWinds DP Trace (v5) =====" | Out-File $OutFile -Encoding UTF8
+"Máquina : $env:COMPUTERNAME"               | Out-File $OutFile -Append
+"Data    : $(Get-Date)"                     | Out-File $OutFile -Append
+"Pacote  : $PkgId"                          | Out-File $OutFile -Append
+""                                          | Out-File $OutFile -Append
+
+# CAS.log inteiro (como texto)
+$casText = if (Test-Path $CasLog) { Get-Content $CasLog -Raw } else { '' }
+$casLines = $casText -split "`r?`n"
+
+# 1. download OK
+"---- CAS.log (download) ----" | Out-File $OutFile -Append
+$dl = $casLines | Where-Object { $_ -like "*$PkgId*" -and ($_ -like "*Download completed*" -or $_ -like "*download succeeded*") }
+if ($dl) { $dl | Out-File $OutFile -Append } else { "nenhuma linha de download concluído" | Out-File $OutFile -Append }
+"" | Out-File $OutFile -Append
+
+# 2. DP usado (procurar : ou = )
+"---- CAS.log (DP) ----" | Out-File $OutFile -Append
+$dpLines = $casLines | Where-Object {
+    $_ -like "*$PkgId*" -and $_ -match "DistributionPoint[:=]"
+}
+if ($dpLines) {
+    $dpLines | Out-File $OutFile -Append
+
+    # tentar extrair só o host do primeiro
+    $first = $dpLines | Select-Object -First 1
+    $dpUrl = ($first -split "DistributionPoint[:=]")[1].Trim(" '""")  # corta aspas/ espaço
+    # se vier https://servidor/... pega só o host
+    $host = $dpUrl
+    if ($dpUrl -match '^https?://([^/]+)/?') {
+        $host = $matches[1]
+    }
+    "" | Out-File $OutFile -Append
+    "DP (primeiro encontrado): $host" | Out-File $OutFile -Append
+} else {
+    "nenhuma linha de DP no CAS.log pra $PkgId" | Out-File $OutFile -Append
+}
+"" | Out-File $OutFile -Append
+
+# 3. LocationServices – mostrar só últimos candidatos
+"---- LocationServices.log (últimos candidatos) ----" | Out-File $OutFile -Append
+$locText = if (Test-Path $LocLog) { Get-Content $LocLog -Raw } else { '' }
+$locLines = $locText -split "`r?`n" | Where-Object { $_ -like "*$PkgId*" -and $_ -match "DistributionPoint[:=]" }
+$locLines | Select-Object -Last 8 | Out-File $OutFile -Append
+
+"===== FIM =====" | Out-File $OutFile -Append
+Write-Host "Gerado: $OutFile"
+
+
+11 #######################################################################################
