@@ -50,3 +50,12 @@ Get-Service *SolarWinds* | Select Name, DisplayName, Status, StartType
 
 6 ################################################################################
 
+Test-Path 'HKLM:\SYSTEM\CurrentControlSet\Services\SolarWindsAgent64'
+
+
+Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Services' | Where-Object Name -like '*SolarWinds*' | Select Name
+
+
+7 ################################################################################
+
+
