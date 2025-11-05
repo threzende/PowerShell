@@ -1,0 +1,2 @@
+mkdir C:\GPO-DefenderOff
+C:\caminho\para\LGPO.exe /b C:\GPO-DefenderOff /n DefenderOff
