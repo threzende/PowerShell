@@ -86,3 +86,19 @@ sc delete CbDefenseWSC
 sc query type= service state= all | findstr /i cbdefense
 
 9 #########################################################################################
+
+
+sc stop CbDefense
+sc stop CbDefenseWSC
+
+reg delete "HKLM\SYSTEM\CurrentControlSet\Services\CbDefense" /f
+reg delete "HKLM\SYSTEM\CurrentControlSet\Services\CbDefenseWSC" /f
+
+reg delete "HKLM\SYSTEM\ControlSet001\Services\CbDefense" /f
+reg delete "HKLM\SYSTEM\ControlSet001\Services\CbDefenseWSC" /f
+
+reg delete "HKLM\SYSTEM\ControlSet002\Services\CbDefense" /f
+reg delete "HKLM\SYSTEM\ControlSet002\Services\CbDefenseWSC" /f
+
+10 #########################################################################################
+
