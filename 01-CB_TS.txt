@@ -36,3 +36,7 @@ echo %errorlevel%
 
 3 ###################################################################################
 
+msiexec /i C:\Windows\ccmcache\So\carbon_black-installer_vista_win7_win8-64-4.0.3.2029.msi REINSTALL=ALL REINSTALLMODE=amus /qn /l*v C:\Temp\cb_repair.log
+
+4 ###################################################################################
+
