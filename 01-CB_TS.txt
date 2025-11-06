@@ -40,3 +40,14 @@ msiexec /i C:\Windows\ccmcache\So\carbon_black-installer_vista_win7_win8-64-4.0.
 
 4 ###################################################################################
 
+
+msiexec /i "C:\Windows\ccmcache\So\carbon_black-installer_vista_win7_win8-64-4.0.3.2029.msi" /qn /l*v C:\Temp\cb_install3.log COMPANY_CODE=SEU_CODIGO
+
+
+5 ############################################################################################
+
+
+
+msiexec /x {CD18D792-3782-4E66-BD7A-E4E05C42BA86} /qn UNINSTALL_CODE=SEU_CODIGO /l*v C:\Temp\cb_un1.log
+msiexec /x {731A72EF-2920-4A2A-841E-486DF6105F8E} /qn UNINSTALL_CODE=SEU_CODIGO /l*v C:\Temp\cb_un2.log
+
