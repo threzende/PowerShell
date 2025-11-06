@@ -83,4 +83,6 @@ sc stop CbDefenseWSC
 sc delete CbDefense
 sc delete CbDefenseWSC
 
+sc query type= service state= all | findstr /i cbdefense
+
 9 #########################################################################################
