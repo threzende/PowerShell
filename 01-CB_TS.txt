@@ -51,3 +51,19 @@ msiexec /x {731A72EF-2920-4A2A-841E-486DF6105F8E} /qn UNINSTALL_CODE=SEU_CODIGO 
 
 
 6 #########################################################################################
+
+$paths = @(
+ 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*',
+ 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*'
+)
+Get-ItemProperty $paths |
+  Where-Object {
+    ($_.DisplayName -match 'Carbon|Confer|Cb Defense|CB Cloud|VMware Carbon' ) -or
+    ($_.Publisher   -match 'VMware|Carbon Black')
+  } |
+  Select-Object DisplayName, DisplayVersion, Publisher, InstallLocation, UninstallString, PSChildName
+
+
+
+
+7 #########################################################################################
