@@ -1,0 +1,34 @@
+1 ###################################################################################
+
+
+Próxima jogada (curta, ping-pong):
+1) Confirma se existe sensor rodando
+sc query confer
+if exist "C:\Program Files\Confer\RepCLI.exe" "C:\Program Files\Confer\RepCLI.exe" status
+
+
+Se existir, é upgrade mesmo.
+
+2) Tenta upgrade “limpo” como SYSTEM + código
+(se tiver PsExec)
+psexec -i -s cmd.exe
+msiexec /i C:\Windows\ccmcache\So\carbon_black-installer_vista_win7_win8-64-4.0.3.2029.msi /qn /l*v C:\Temp\cb_upgrade.log COMPANY_CODE=SEU_CODIGO UNINSTALL_CODE=CODIGO_DE_DESINSTALACAO
+
+
+Se o sensor tiver tamper, sem UNINSTALL_CODE a remoção falha em 1603.
+
+3) Se preferir separar as etapas (também como SYSTEM):
+msiexec /x {CD18D792-3782-4E66-BD7A-E4E05C42BA86} /qn  UNINSTALL_CODE=CODIGO
+msiexec /x {731A72EF-2920-4A2A-841E-486DF6105F8E} /qn  UNINSTALL_CODE=CODIGO
+rd /s /q "C:\Program Files\Confer"
+msiexec /i C:\Temp\rev1\CB\CB.msi /qn /l*v C:\Temp\cb_install2.log COMPANY_CODE=SEU_CODIGO
+
+
+Os dois GUIDs aparecem no teu log; se algum voltar 1605 (não instalado), ok.
+
+Manda o resultado do sc query confer/repcli status ou me diz se conseguiu rodar como SYSTEM com UNINSTALL_CODE. Aí eu te digo o próximo passo.
+
+
+2 ###################################################################################
+
+
