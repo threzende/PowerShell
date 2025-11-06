@@ -63,7 +63,17 @@ Get-ItemProperty $paths |
   } |
   Select-Object DisplayName, DisplayVersion, Publisher, InstallLocation, UninstallString, PSChildName
 
-
-
-
 7 #########################################################################################
+
+$pat = 'carbon|confer|cbdefense|vmware.?carbon|vmware.?cb|bit9|parity'
+'=== SERVICES ==='
+Get-Service |
+  Where-Object { $_.Name -match $pat -or $_.DisplayName -match $pat } |
+  Select-Object Name, DisplayName, Status, StartType
+
+'=== DRIVERS ==='
+Get-CimInstance Win32_SystemDriver |
+  Where-Object { ($_.Name -match $pat) -or ($_.DisplayName -match $pat) -or ($_.PathName -match $pat) } |
+  Select-Object Name, DisplayName, State, StartMode, PathName
+
+8 #########################################################################################
