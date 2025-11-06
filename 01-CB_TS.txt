@@ -102,3 +102,31 @@ reg delete "HKLM\SYSTEM\ControlSet002\Services\CbDefenseWSC" /f
 
 10 #########################################################################################
 
+# 1) parar e deletar os serviços, se existirem
+$svcs = 'CbDefense','CbDefenseWSC'
+foreach ($s in $svcs) {
+  $svc = Get-Service -Name $s -ErrorAction SilentlyContinue
+  if ($svc) {
+    try { Stop-Service -Name $s -Force -ErrorAction SilentlyContinue } catch {}
+    & sc.exe delete $s | Out-Null
+  }
+}
+
+# 2) apagar as chaves de serviço em todos os ControlSets (se existirem)
+$paths = @(
+  'HKLM:\SYSTEM\CurrentControlSet\Services\CbDefense',
+  'HKLM:\SYSTEM\CurrentControlSet\Services\CbDefenseWSC',
+  'HKLM:\SYSTEM\ControlSet001\Services\CbDefense',
+  'HKLM:\SYSTEM\ControlSet001\Services\CbDefenseWSC',
+  'HKLM:\SYSTEM\ControlSet002\Services\CbDefense',
+  'HKLM:\SYSTEM\ControlSet002\Services\CbDefenseWSC'
+)
+foreach ($p in $paths) {
+  if (Test-Path $p) { Remove-Item -Path $p -Recurse -Force }
+}
+
+# 3) mostrar se sobrou algo
+'=== Serviços restantes ==='
+Get-Service | Where-Object {$_.Name -match 'CbDefense'} | Select-Object Name,Status,StartType
+
+11 #########################################################################################
