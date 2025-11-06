@@ -31,4 +31,8 @@ Manda o resultado do sc query confer/repcli status ou me diz se conseguiu rodar 
 
 2 ###################################################################################
 
+msiexec /x {731A72EF-2920-4A2A-841E-486DF6105F8E} /qn /l*v C:\Temp\cb_uninstall_guid1.log
+echo %errorlevel%
+
+3 ###################################################################################
 
