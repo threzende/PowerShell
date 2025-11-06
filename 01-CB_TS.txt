@@ -77,3 +77,10 @@ Get-CimInstance Win32_SystemDriver |
   Select-Object Name, DisplayName, State, StartMode, PathName
 
 8 #########################################################################################
+
+sc stop CbDefense
+sc stop CbDefenseWSC
+sc delete CbDefense
+sc delete CbDefenseWSC
+
+9 #########################################################################################
