@@ -1,0 +1,36 @@
+# Verificar versão do SolarWinds (saída simples)
+$uninstallPaths = @(
+  'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*',
+  'HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*'
+)
+
+$entries = foreach ($path in $uninstallPaths) {
+  Get-ItemProperty -Path $path -ErrorAction SilentlyContinue |
+    Where-Object { $_.DisplayName -match 'SolarWinds' -and $_.DisplayVersion } |
+    Select-Object DisplayName, DisplayVersion
+}
+
+if (-not $entries) {
+  Write-Output 'not installed'
+  exit 0
+}
+
+# Se houver múltiplos SolarWinds, escolhe a maior versão
+$parsed = foreach ($e in $entries) {
+  $raw = $e.DisplayVersion
+  $clean = ($raw -replace '[^\d\.]', '')
+  try {
+    [PSCustomObject]@{ Raw=$raw; Parsed=[version]$clean }
+  } catch {
+    [PSCustomObject]@{ Raw=$raw; Parsed=$null }
+  }
+}
+
+$best = $parsed | Where-Object Parsed | Sort-Object Parsed -Descending | Select-Object -First 1
+
+if ($best) {
+  Write-Output $best.Parsed.ToString()
+} else {
+  # Se não deu pra fazer parse, devolve a primeira versão crua encontrada
+  Write-Output ($entries | Select-Object -ExpandProperty DisplayVersion -First 1)
+}
