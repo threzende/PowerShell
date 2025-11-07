@@ -181,3 +181,27 @@ Remove-EnumLegacy -name 'LEGACY_CbDefenseWSC'
 
 13 #########################################################################################
 
+O que eu faria agora (1–2 passos no ping-pong):
+
+Start + eventos + log (pega o erro real):
+
+sc start CbDefense
+Get-WinEvent -FilterHashtable @{LogName='System'; Id=@(7000,7009,7031,7034); StartTime=(Get-Date).AddMinutes(-10)} |
+  Select TimeCreated, Id, Message
+Get-Content "C:\Program Files\Confer\confer.log" -Tail 80
+
+
+Teste de rede (pra eliminar proxy/SSL):
+
+Test-NetConnection cloud.carbonblack.com -Port 443
+Test-NetConnection defense.conferdeploy.net -Port 443
+
+
+(se usar proxy, me diga qual tipo/host/porta)
+
+Se vier 7000/7009 (timeout) sem erro de rede no confer.log, sobe o ServicesPipeTimeout e reinicia:
+
+New-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control' -Name ServicesPipeTimeout -PropertyType DWord -Value 120000 -Force
+Restart-Computer
+
+14 #########################################################################################
