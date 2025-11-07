@@ -249,3 +249,13 @@ Sort-Object DisplayName
 
 16 #########################################################################################
 
+$action = "New-ScheduledTaskAction -Execute 'Msiexec.exe' -Argument '/fvamus "$fvamus" /qn /l*v "$slog" COMPANY_CODE="$scode"'"
+
+Get-CimInstance -ClassName Win32_Product | 
+Where-Object { $_.Name -match 'antivirus' -or $_.Name -match 'security' -or $_.Name -match 'endpoint' } | 
+Select-Object Name
+
+Get-MpComputerStatus | Select-Object AntivirusEnabled, RealTimeProtectionEnabled
+
+17 #########################################################################################
+
