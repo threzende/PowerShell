@@ -138,3 +138,46 @@ Get-CimInstance Win32_Service -Filter "Name='CbDefenseWSC'"  | Remove-CimInstanc
 sc.exe query type= service state= all | findstr /i cbdefense
 
 12 #########################################################################################
+
+
+# 1) Congelar quem recria
+Stop-Service ccmexec -Force -ErrorAction SilentlyContinue
+Set-Service  ccmexec -StartupType Disabled -ErrorAction SilentlyContinue
+Get-Process msiexec -ErrorAction SilentlyContinue | Stop-Process -Force
+
+# 2) Remover serviços (SCM + WMI)
+'-- remove via SCM'
+& sc.exe delete CbDefense       | Out-Null
+& sc.exe delete CbDefenseWSC    | Out-Null
+'-- remove via WMI'
+Get-CimInstance Win32_Service -Filter "Name='CbDefense'"     | Remove-CimInstance -ErrorAction SilentlyContinue
+Get-CimInstance Win32_Service -Filter "Name='CbDefenseWSC'"  | Remove-CimInstance -ErrorAction SilentlyContinue
+
+# 3) Apagar chaves de serviço em TODOS os ControlSets
+$svcKeys = @(
+ 'HKLM:\SYSTEM\CurrentControlSet\Services\CbDefense',
+ 'HKLM:\SYSTEM\CurrentControlSet\Services\CbDefenseWSC',
+ 'HKLM:\SYSTEM\ControlSet001\Services\CbDefense',
+ 'HKLM:\SYSTEM\ControlSet001\Services\CbDefenseWSC',
+ 'HKLM:\SYSTEM\ControlSet002\Services\CbDefense',
+ 'HKLM:\SYSTEM\ControlSet002\Services\CbDefenseWSC'
+)
+foreach ($k in $svcKeys) { if (Test-Path $k) { Remove-Item $k -Recurse -Force } }
+
+# 4) Apagar LEGACY_* (precisa tomar posse das chaves Enum)
+function Remove-EnumLegacy($name){
+  $p = "HKLM:\SYSTEM\CurrentControlSet\Enum\Root\$name"
+  if (Test-Path $p) {
+    & reg.exe add "HKLM\SYSTEM\CurrentControlSet\Enum\Root" /v "TMP" /t REG_SZ /d "x" /f | Out-Null
+    & reg.exe delete ("HKLM\SYSTEM\CurrentControlSet\Enum\Root\" + $name) /f
+  }
+}
+Remove-EnumLegacy -name 'LEGACY_CbDefense'
+Remove-EnumLegacy -name 'LEGACY_CbDefenseWSC'
+
+# 5) Verificar se ainda existe algo
+'=== Serviços restantes ==='
+& sc.exe query type= service state= all | Select-String -Pattern 'CbDefense'
+
+13 #########################################################################################
+
