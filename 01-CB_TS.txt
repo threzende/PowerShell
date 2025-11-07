@@ -241,3 +241,11 @@ Unregister-ScheduledTask -TaskName $taskName -Confirm:$false
 "RepCLI exists? " + (Test-Path 'C:\Program Files\Confer\RepCLI.exe')
 
 15 #########################################################################################
+
+Get-ItemProperty HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\* | 
+Where-Object { $_.DisplayName -match 'Visual C\+\+' -or $_.DisplayName -match 'Net Framework' } | 
+Select-Object DisplayName, DisplayVersion | 
+Sort-Object DisplayName
+
+16 #########################################################################################
+
