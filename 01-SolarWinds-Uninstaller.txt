@@ -1,188 +1,232 @@
 1 ############################################################################
 
-# Requires: Administrator
-# SCCM return codes: 0 = success, 2 = leftover cleanup failure (no reboot codes are ever returned)
+<# 
+    Uninstall-SolarWinds.ps1
+    - Speaks each step (Write-Log + Write-Progress)
+    - NEVER reboots or returns 3010
+    - Uninstall FIRST, then cleanup folders (including Agent\Certificates)
+    - Comments/messages in English as requested
+#>
+
+[CmdletBinding()]
+param(
+    # Preview mode: when $true, the script DOES NOT uninstall or delete; it only logs what it would do.
+    [switch]$DryRun = $true,
+
+    # If leftovers remain after cleanup, exit with code 2 (so SCCM can flag). Set to $false to ignore leftovers.
+    [switch]$StrictCleanup = $true,
+
+    # Optional transcript file path (start a log). If omitted, no transcript file is written.
+    [string]$TranscriptPath
+)
+
 $ErrorActionPreference = 'Stop'
-$strictCleanup = $true     # fail if leftovers remain
-$noReboot = $true          # never return 3010
-$DryRun = $true            # PREVIEW MODE for ISE: when $true, do not uninstall or delete - just log actions
-$UninstallPhaseCompleted = $false
+$global:UninstallPhaseCompleted = $false
+$global:StepIndex = 0
+$NoReboot = $true   # hard block: we never propagate 3010
 
-function Write-Log($msg){ Write-Host "[SolarWinds-Uninstall] $msg" }
-
-# Helper: run a process or simulate in DryRun
-function Invoke-Proc {
-    param(
-        [Parameter(Mandatory=$true)][string]$FilePath,
-        [Parameter(Mandatory=$false)][string]$Arguments = ""
-    )
-    if ($DryRun) {
-        Write-Log "DRYRUN: Would run -> `"$FilePath`" $Arguments"
-        return @{ ExitCode = 0 }
-    } else {
-        $p = Start-Process -FilePath $FilePath -ArgumentList $Arguments -Wait -PassThru -ErrorAction Stop
-        return @{ ExitCode = $p.ExitCode }
-    }
+function Write-Log([string]$Message) {
+    $stamp = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
+    Write-Host ("[{0}] {1}" -f $stamp, $Message)
 }
 
-# 1) Stop SolarWinds services/processes BEFORE uninstall (prevents files-in-use)
-Write-Log "Stopping SolarWinds services..."
-Get-Service | Where-Object {
-  $_.Name -like 'SolarWinds*' -or $_.DisplayName -like 'SolarWinds*' -or $_.Name -like 'SW*'
-} | ForEach-Object {
-  try {
-    if ($_.Status -ne 'Stopped') {
-        if ($DryRun) { Write-Log "DRYRUN: Would Stop-Service $($_.Name) -Force" }
-        else { Stop-Service -Name $_.Name -Force -ErrorAction SilentlyContinue }
-    }
-  } catch {}
+function Step([string]$Title, [string]$Status = "") {
+    $global:StepIndex++
+    if (-not $Status) { $Status = $Title }
+    Write-Progress -Activity ("SolarWinds Uninstall — Step {0}" -f $global:StepIndex) -Status $Status -PercentComplete -1
+    Write-Log ("STEP {0}: {1}" -f $global:StepIndex, $Title)
 }
 
-Write-Log "Killing SolarWinds processes..."
-Get-Process | Where-Object { $_.Name -like 'SolarWinds*' -or $_.Name -like 'SW*' } | ForEach-Object {
-  try {
-    if ($DryRun) { Write-Log "DRYRUN: Would Stop-Process -Id $($_.Id) -Force" }
-    else { Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue }
-  } catch {}
-}
-
-# 2) Detect installed SolarWinds products
-$uninstallHives = @(
-  'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*',
-  'HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*'
-)
-$patterns = '(?i)solarwinds|orion|sem|security event manager|log analyzer|engineer.s toolset|npm|sam|ipam|npm polling engine|solarwinds agent'
-
-$targets = foreach ($hive in $uninstallHives){
-  Get-ItemProperty -Path $hive -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -match $patterns }
-}
-
-if (-not $targets) {
-  Write-Log "No SolarWinds products found to uninstall."
-  # Even if nothing to uninstall, we still mark uninstall phase complete so cleanup can run
-  $UninstallPhaseCompleted = $true
-} else {
-  # 3) Uninstall each app and WAIT (guarantees cleanup happens only after uninstallers finish)
-  foreach ($app in $targets) {
-    $name = $app.DisplayName
-    $uninst = $app.UninstallString
-    if (-not $uninst) { Write-Log "No UninstallString for: $name — skipping."; continue }
-
-    Write-Log "Uninstalling: $name"
-    $file = $null; $args = $null
-
-    if ($uninst -match '(?i)msiexec') {
-      # Normalize MSI string: convert /I to /X and enforce silent + no restart
-      $args = $uninst -replace '(?i)msiexec\.exe','' -replace '(?i)/I','/X' -replace '(?i)/x','/X'
-      if ($args -notmatch '(?i)/qn') { $args = "$args /qn" }
-      if ($args -notmatch '(?i)/norestart') { $args = "$args /norestart" }
-      $file = "$env:WINDIR\System32\msiexec.exe"
-    } else {
-      # EXE uninstallers: preserve existing args and append quiet + no restart
-      if ($uninst.StartsWith('"')) {
-        $file = $uninst.Substring(1, $uninst.IndexOf('"',1)-1)
-        $args = $uninst.Substring($uninst.IndexOf('"',1)+1).Trim()
-      } else {
-        $parts = $uninst.Split(' ',2)
-        $file = $parts[0]
-        $args = if ($parts.Count -gt 1) { $parts[1] } else { "" }
-      }
-      if ($args -notmatch '(?i)/quiet|/qn|/silent|/s(?!e)') { $args = "$args /quiet" }
-      if ($args -notmatch '(?i)/norestart') { $args = "$args /norestart" }
-    }
-
-    # Run or simulate the uninstaller
+# Optional transcript
+if ($TranscriptPath) {
     try {
-      $res = Invoke-Proc -FilePath $file -Arguments $args
-      $exit = $res.ExitCode
-      Write-Log "ExitCode: $exit for $name"
-      # Treat 3010 (reboot required) as success without reboot
-      if ($exit -ne 0 -and $exit -ne 3010 -and $exit -ne 1605 -and $exit -ne 1614 -and $exit -ne 1612) {
-        throw "Uninstall failed for $name (ExitCode $exit)"
-      }
+        Start-Transcript -Path $TranscriptPath -Force | Out-Null
+        Write-Log ("Transcript started -> {0}" -f $TranscriptPath)
     } catch {
-      Write-Log "Error uninstalling $name: $($_.Exception.Message)"
+        Write-Log ("WARNING: Could not start transcript: {0}" -f $_.Exception.Message)
     }
-  }
-
-  # Mark uninstall phase completed only after the loop finishes
-  $UninstallPhaseCompleted = $true
 }
 
-# === CLEANUP BLOCK: runs ONLY IF uninstall phase is completed ===
-if ($UninstallPhaseCompleted -ne $true) {
-    Write-Log "Safety: Cleanup will NOT run because uninstall phase did not complete."
-    exit 2
-}
-
-# 4) Folders cleanup (AFTER uninstall). Includes only the filesystem certs folder you requested.
-# We remove GENERAL SolarWinds folders and the *contents* of '...SolarWinds Agent\Certificates'.
-# We DO NOT touch Windows cert stores.
-$generalPaths = @(
-  'C:\Program Files\SolarWinds',
-  'C:\Program Files (x86)\SolarWinds',
-  'C:\ProgramData\SolarWinds',
-  'C:\ProgramData\SolarWinds Agent',
-  'C:\ProgramData\SolarWindsAgent',
-  'C:\ProgramData\SolarWinds\Agent'
-)
-# Certificates folder variants (content-only deletion)
-$certFolders = @(
-  'C:\ProgramData\SolarWinds\Agent\Certificates',
-  'C:\ProgramData\SolarWinds Agent\Certificates',
-  'C:\ProgramData\SolarWindsAgent\Certificates',
-  'C:\ProgramData\SolarWinds Agente\Certificates',      # locale/typo variants
-  'C:\ProgramData\SolarWinds Agente\Certific*'          # wildcard to catch small typos (ISE only; Remove-Item will expand)
-)
-
-# Delete general folders
-foreach ($p in $generalPaths) {
-  if (Test-Path $p) {
-    if ($DryRun) {
-      Write-Log "DRYRUN: Would remove folder recursively -> $p"
-    } else {
-      try {
-        Write-Log "Removing folder: $p"
-        Get-ChildItem -Path $p -Recurse -Force -ErrorAction SilentlyContinue | ForEach-Object { try { $_.Attributes = 'Normal' } catch {} }
-        Remove-Item -Path $p -Recurse -Force -ErrorAction SilentlyContinue
-      } catch { Write-Log "Failed to remove $p: $($_.Exception.Message)" }
-    }
-  }
-}
-
-# Delete only the CONTENTS of the Certificates folder(s)
-foreach ($cpath in $certFolders) {
-  if (Test-Path $cpath) {
-    if ($DryRun) {
-      Write-Log "DRYRUN: Would remove CONTENTS of -> $cpath"
-    } else {
-      try {
-        Write-Log "Removing contents of certificates folder: $cpath"
-        Get-ChildItem -Path $cpath -Force -ErrorAction SilentlyContinue | ForEach-Object {
-          try {
-            if (Test-Path $_.FullName) {
-              $_.Attributes = 'Normal'
-              Remove-Item -Path $_.FullName -Recurse -Force -ErrorAction SilentlyContinue
+try {
+    Step "Stop SolarWinds services"
+    Get-Service | Where-Object {
+        $_.Name -like 'SolarWinds*' -or $_.DisplayName -like 'SolarWinds*' -or $_.Name -like 'SW*'
+    } | ForEach-Object {
+        try {
+            if ($_.Status -ne 'Stopped') {
+                if ($DryRun) { Write-Log ('DRYRUN: Would Stop-Service {0} -Force' -f $_.Name) }
+                else { Stop-Service -Name $_.Name -Force -ErrorAction SilentlyContinue }
             }
-          } catch { Write-Log "Failed to remove item in $cpath: $($_.Exception.Message)" }
-        }
-      } catch { Write-Log "Failed to clean $cpath: $($_.Exception.Message)" }
+        } catch {}
     }
-  }
+
+    Step "Kill SolarWinds processes"
+    Get-Process -ErrorAction SilentlyContinue | Where-Object {
+        $_.Name -like 'SolarWinds*' -or $_.Name -like 'SW*'
+    } | ForEach-Object {
+        try {
+            if ($DryRun) { Write-Log ('DRYRUN: Would Stop-Process -Id {0} -Force' -f $_.Id) }
+            else { Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue }
+        } catch {}
+    }
+
+    Step "Discover installed SolarWinds products"
+    $uninstallHives = @(
+        'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*',
+        'HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*'
+    )
+    $patterns = '(?i)solarwinds|orion|sem|security event manager|log analyzer|engineer.s toolset|npm|sam|ipam|npm polling engine|solarwinds agent'
+
+    $targets = foreach ($hive in $uninstallHives){
+        Get-ItemProperty -Path $hive -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -match $patterns }
+    }
+
+    if ($targets) {
+        $targets | ForEach-Object { Write-Log ('FOUND: {0}' -f $_.DisplayName) }
+    } else {
+        Write-Log 'No SolarWinds products found to uninstall.'
+    }
+
+    Step "Uninstall (wait for each uninstaller to finish)" "Uninstalling products"
+    if ($targets) {
+        foreach ($app in $targets) {
+            $name  = $app.DisplayName
+            $uninst = $app.UninstallString
+
+            if (-not $uninst) { Write-Log ('No UninstallString for: {0} — skipping.' -f $name); continue }
+
+            $file = $null; $args = $null
+            if ($uninst -match '(?i)msiexec') {
+                # Normalize MSI string: convert /I to /X and enforce silent + no restart
+                $args = $uninst -replace '(?i)msiexec\.exe','' -replace '(?i)/I','/X' -replace '(?i)/x','/X'
+                if ($args -notmatch '(?i)/qn') { $args = "$args /qn" }
+                if ($args -notmatch '(?i)/norestart') { $args = "$args /norestart" }
+                $file = "$env:WINDIR\System32\msiexec.exe"
+            } else {
+                # EXE uninstallers: preserve existing args and append quiet + no restart
+                if ($uninst.StartsWith('"')) {
+                    $file = $uninst.Substring(1, $uninst.IndexOf('"',1)-1)
+                    $args = $uninst.Substring($uninst.IndexOf('"',1)+1).Trim()
+                } else {
+                    $parts = $uninst.Split(' ',2)
+                    $file = $parts[0]
+                    $args = if ($parts.Count -gt 1) { $parts[1] } else { "" }
+                }
+                if ($args -notmatch '(?i)/quiet|/qn|/silent|/s(?!e)') { $args = "$args /quiet" }
+                if ($args -notmatch '(?i)/norestart') { $args = "$args /norestart" }
+            }
+
+            Write-Log ('CMD: "{0}" {1}' -f $file, $args)
+
+            if ($DryRun) {
+                Write-Log ('DRYRUN: Would run uninstaller for {0}' -f $name)
+                $exit = 0
+            } else {
+                try {
+                    $p = Start-Process -FilePath $file -ArgumentList $args -Wait -PassThru -ErrorAction Stop
+                    $exit = $p.ExitCode
+                } catch {
+                    Write-Log ('Error launching uninstaller for {0}: {1}' -f $name, $_.Exception.Message)
+                    $exit = 1
+                }
+            }
+
+            Write-Log ('ExitCode: {0} for {1}' -f $exit, $name)
+            # Treat 3010 as success but do not reboot
+            if ($exit -ne 0 -and $exit -ne 3010 -and $exit -ne 1605 -and $exit -ne 1614 -and $exit -ne 1612) {
+                Write-Log ('WARNING: Uninstall reported failure for {0} (ExitCode {1})' -f $name, $exit)
+            }
+        }
+    }
+    $global:UninstallPhaseCompleted = $true
+    Write-Log 'UNINSTALL PHASE COMPLETED.'
+
+    # ===================== CLEANUP ONLY AFTER UNINSTALL =====================
+    if ($global:UninstallPhaseCompleted -ne $true) {
+        Write-Log 'Safety: Cleanup will NOT run because uninstall phase did not complete.'
+        if ($TranscriptPath) { Stop-Transcript | Out-Null }
+        exit 2
+    }
+
+    Step "Cleanup folders (AFTER uninstall)" "Deleting folders/files"
+    # General SolarWinds folders
+    $generalPaths = @(
+        'C:\Program Files\SolarWinds',
+        'C:\Program Files (x86)\SolarWinds',
+        'C:\ProgramData\SolarWinds',
+        'C:\ProgramData\SolarWinds Agent',
+        'C:\ProgramData\SolarWindsAgent',
+        'C:\ProgramData\SolarWinds\Agent'
+    )
+    # Certificates folder (filesystem) — remove CONTENTS only
+    $certFolders = @(
+        'C:\ProgramData\SolarWinds\Agent\Certificates',
+        'C:\ProgramData\SolarWinds Agent\Certificates',
+        'C:\ProgramData\SolarWindsAgent\Certificates',
+        'C:\ProgramData\SolarWinds Agente\Certificates',
+        'C:\ProgramData\SolarWinds Agente\Certific*'
+    )
+
+    # Delete general folders
+    foreach ($p in $generalPaths) {
+        if (Test-Path $p) {
+            if ($DryRun) {
+                Write-Log ('DRYRUN: Would remove recursively -> {0}' -f $p)
+            } else {
+                try {
+                    Write-Log ('Removing folder: {0}' -f $p)
+                    Get-ChildItem -Path $p -Recurse -Force -ErrorAction SilentlyContinue | ForEach-Object { try { $_.Attributes = 'Normal' } catch {} }
+                    Remove-Item -Path $p -Recurse -Force -ErrorAction SilentlyContinue
+                } catch { Write-Log ('Failed to remove {0}: {1}' -f $p, $_.Exception.Message) }
+            }
+        }
+    }
+
+    # Delete only the CONTENTS of the Certificates folder(s)
+    foreach ($cpath in $certFolders) {
+        if (Test-Path $cpath) {
+            if ($DryRun) {
+                Write-Log ('DRYRUN: Would remove CONTENTS of -> {0}' -f $cpath)
+            } else {
+                try {
+                    Write-Log ('Cleaning certificates folder: {0}' -f $cpath)
+                    Get-ChildItem -Path $cpath -Force -ErrorAction SilentlyContinue | ForEach-Object {
+                        try {
+                            if (Test-Path $_.FullName) {
+                                $_.Attributes = 'Normal'
+                                Remove-Item -Path $_.FullName -Recurse -Force -ErrorAction SilentlyContinue
+                            }
+                        } catch { Write-Log ('Failed to remove item in {0}: {1}' -f $cpath, $_.Exception.Message) }
+                    }
+                } catch { Write-Log ('Failed to clean {0}: {1}' -f $cpath, $_.Exception.Message) }
+            }
+        }
+    }
+
+    Step "Verify leftovers"
+    $leftover = @()
+    foreach ($p in ($generalPaths + $certFolders)) { if (Test-Path $p) { $leftover += $p } }
+
+    if ($leftover.Count -gt 0) {
+        Write-Log "WARNING: leftover folders still present."
+        Write-Log ("Remaining: " + ($leftover -join '; '))
+        if ($StrictCleanup -and -not $DryRun) {
+            if ($TranscriptPath) { Stop-Transcript | Out-Null }
+            exit 2
+        }
+    }
+
+    Step "Done"
+    Write-Log "All steps completed."
+    if ($TranscriptPath) { Stop-Transcript | Out-Null }
+    exit 0
+}
+catch {
+    Write-Log ('FATAL: {0}' -f $_.Exception.Message)
+    if ($TranscriptPath) { try { Stop-Transcript | Out-Null } catch {} }
+    exit 1
 }
 
-# 5) Verify leftovers (folders only; no cert store deletion performed)
-$leftoverDirs = @()
-foreach ($p in ($generalPaths + $certFolders)) { if (Test-Path $p) { $leftoverDirs += $p } }
-
-if ($leftoverDirs.Count -gt 0) {
-  Write-Log "WARNING: leftover folders still present."
-  Write-Log ("Remaining: " + ($leftoverDirs -join '; '))
-  if ($strictCleanup -and -not $DryRun) { exit 2 }
-}
-
-# 6) Final exit (never returns 3010; DryRun always returns 0)
-exit 0
 
 
 
