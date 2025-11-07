@@ -1,36 +1,47 @@
-# Verificar versão do SolarWinds (saída simples)
+# Check if any SolarWinds product is installed and print its highest version.
+# Output:
+#   - If found: prints the version only (e.g., 2024.0.0.0)
+#   - If not found: prints "not installed"
+
+$ErrorActionPreference = 'SilentlyContinue'
+
+# Registry locations for installed programs (both 64-bit and 32-bit views)
 $uninstallPaths = @(
   'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*',
   'HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*'
 )
 
+# Collect SolarWinds entries with a DisplayVersion
 $entries = foreach ($path in $uninstallPaths) {
-  Get-ItemProperty -Path $path -ErrorAction SilentlyContinue |
+  Get-ItemProperty -Path $path |
     Where-Object { $_.DisplayName -match 'SolarWinds' -and $_.DisplayVersion } |
     Select-Object DisplayName, DisplayVersion
 }
 
-if (-not $entries) {
+if (-not $entries -or $entries.Count -eq 0) {
   Write-Output 'not installed'
   exit 0
 }
 
-# Se houver múltiplos SolarWinds, escolhe a maior versão
+# Parse versions and pick the highest (handles non-numeric suffixes by stripping them)
 $parsed = foreach ($e in $entries) {
-  $raw = $e.DisplayVersion
+  $raw = [string]$e.DisplayVersion
+  # Keep only digits and dots for version parsing
   $clean = ($raw -replace '[^\d\.]', '')
   try {
     [PSCustomObject]@{ Raw=$raw; Parsed=[version]$clean }
   } catch {
+    # If parsing fails, keep it as null so we can fallback later
     [PSCustomObject]@{ Raw=$raw; Parsed=$null }
   }
 }
 
+# Prefer the highest parsed version
 $best = $parsed | Where-Object Parsed | Sort-Object Parsed -Descending | Select-Object -First 1
 
 if ($best) {
   Write-Output $best.Parsed.ToString()
 } else {
-  # Se não deu pra fazer parse, devolve a primeira versão crua encontrada
+  # Fallback: if none could be parsed, return the first raw version found
   Write-Output ($entries | Select-Object -ExpandProperty DisplayVersion -First 1)
 }
