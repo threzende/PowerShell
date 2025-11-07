@@ -259,3 +259,57 @@ Get-MpComputerStatus | Select-Object AntivirusEnabled, RealTimeProtectionEnabled
 
 17 #########################################################################################
 
+# ====================================================================
+# ATENÇÃO: SUBSTITUA OS VALORES ABAIXO PELOS CORRETOS ANTES DE EXECUTAR!
+# ====================================================================
+
+# 1. Caminho completo para o instalador .msi do Carbon Black (Confirmado por você)
+$fvamus = "C:\temp\cb\cb.msi" 
+
+# 2. Código da sua empresa (Company Code) - VOCÊ PRECISA MUDAR ESTE VALOR!
+$scode = "SEU_CODIGO_DA_EMPRESA_AQUI" 
+
+# 3. Nome do Grupo (GROUP_NAME) - VOCÊ PRECISA MUDAR ESTE VALOR!
+$group = "NOME_DO_GRUPO_NA_CONSOLE_CB"
+
+# ====================================================================
+
+# Variáveis de Controle e Log
+$TaskName = "CBInstallTest_Final"
+# Caminho do Log: O LOG ESTARÁ AQUI! C:\Windows\Temp\CB_LOG_TEST.log
+$slog_path = "C:\Windows\Temp\CB_LOG_TEST.log"
+# Argumentos de instalação: /i (Instalar) /qn (Quiet No UI) /l*v (Log Verbose)
+# Adicionado GROUP_NAME!
+$msi_arguments = "/i `"$fvamus`" /qn /l*v `"$slog_path`" COMPANY_CODE=`"$scode`" GROUP_NAME=`"$group`""
+
+# 1. Definição da Ação 
+$action = New-ScheduledTaskAction -Execute 'C:\Windows\System32\msiexec.exe' -Argument $msi_arguments
+
+# 2. Criação da Tarefa Agendada rodando como SYSTEM (Highest)
+$principal = New-ScheduledTaskPrincipal -UserID 'SYSTEM' -RunLevel Highest
+$settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -Compatibility Win8
+$task = New-ScheduledTask -Action $action -Principal $principal -Settings $settings 
+Register-ScheduledTask -TaskName $TaskName -InputObject $task | Out-Null
+
+Write-Host "Iniciando a tarefa agendada '$TaskName'..."
+Start-ScheduledTask -TaskName $TaskName 
+
+# 3. Espera o término da tarefa (Timeout 10 min)
+$deadline = (Get-Date).AddMinutes(10)
+do {
+    Start-Sleep 2
+    $state = (Get-ScheduledTask -TaskName $TaskName).State
+} while ($state -eq 'Running' -and (Get-Date) -lt $deadline)
+
+# 4. Coleta o resultado
+$last = Get-ScheduledTaskInfo -TaskName $TaskName
+Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false
+
+# 5. Exibe o resultado e a localização do Log
+Write-Host "---"
+Write-Host "✅ TAREFA CONCLUÍDA"
+Write-Host "Resultado da Tentativa: $($last.LastTaskResult)" 
+Write-Host "🚨 O LOG DETALHADO ESTÁ EM: $slog_path"
+Write-Host "---"
+
+18 #########################################################################################
