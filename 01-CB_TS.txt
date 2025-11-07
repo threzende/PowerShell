@@ -130,3 +130,11 @@ foreach ($p in $paths) {
 Get-Service | Where-Object {$_.Name -match 'CbDefense'} | Select-Object Name,Status,StartType
 
 11 #########################################################################################
+
+Get-CimInstance Win32_Service -Filter "Name='CbDefense'"     | Remove-CimInstance -ErrorAction SilentlyContinue
+Get-CimInstance Win32_Service -Filter "Name='CbDefenseWSC'"  | Remove-CimInstance -ErrorAction SilentlyContinue
+
+# conferir
+sc.exe query type= service state= all | findstr /i cbdefense
+
+12 #########################################################################################
