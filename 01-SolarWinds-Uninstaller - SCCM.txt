@@ -1,0 +1,187 @@
+<# 
+  Uninstall-SolarWinds_SCCM.ps1
+  - Quiet run: prints only a single summary line at the end
+  - NEVER reboots; treats 3010 as success
+  - Order: Uninstall FIRST -> filesystem cleanup -> CertLM("SolarWinds Agent\Certificates") cleanup
+  - Deletes ONLY the contents of the Certificates folder/store (does not remove the store container itself)
+#>
+
+[CmdletBinding()]
+param(
+  [switch]$StrictCleanup = $true,                         # if leftovers remain, exit 2
+  [string]$TranscriptPath                                # optional log file (omit to disable)
+)
+
+$ErrorActionPreference = 'Stop'
+$ExitCode = 0
+$RemovedCerts = 0
+$LeftoverDirs = @()
+$StoreLeft = 0
+$FoundTargets = @()
+
+# Folders to remove entirely (keep/remove as desired)
+$GeneralPaths = @(
+  'C:\Program Files\SolarWinds',
+  'C:\Program Files (x86)\SolarWinds',
+  'C:\ProgramData\SolarWinds'
+  # NOTE: If you want to preserve the "SolarWinds Agent" folder shell, comment out the next two lines:
+  ,'C:\ProgramData\SolarWinds Agent'
+  ,'C:\ProgramData\SolarWinds\Agent'
+)
+
+# Certificates folders (filesystem) - delete CONTENTS only
+$CertFoldersFS = @(
+  'C:\ProgramData\SolarWinds\Agent\Certificates',
+  'C:\ProgramData\SolarWinds Agent\Certificates',
+  'C:\ProgramData\SolarWindsAgent\Certificates',
+  'C:\ProgramData\SolarWinds Agente\Certificates',
+  'C:\ProgramData\SolarWinds Agente\Certific*'
+)
+
+# Optional transcript (quiet: no writes except final summary)
+if ($TranscriptPath) {
+  try { Start-Transcript -Path $TranscriptPath -Force | Out-Null } catch {}
+}
+
+try {
+  # 1) Stop services (quiet)
+  Get-Service -ErrorAction SilentlyContinue | Where-Object {
+    $_.Name -like 'SolarWinds*' -or $_.DisplayName -like 'SolarWinds*' -or $_.Name -like 'SW*'
+  } | ForEach-Object {
+    try { if ($_.Status -ne 'Stopped') { Stop-Service -Name $_.Name -Force -ErrorAction SilentlyContinue } } catch {}
+  }
+
+  # 2) Kill processes (quiet)
+  Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.Name -like 'SolarWinds*' -or $_.Name -like 'SW*' } | ForEach-Object {
+    try { Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue } catch {}
+  }
+
+  # 3) Discover installed SolarWinds products
+  $uninstallHives = @(
+    'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*',
+    'HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*'
+  )
+  $patterns = '(?i)solarwinds|orion|sem|security event manager|log analyzer|engineer.s toolset|npm|sam|ipam|npm polling engine|solarwinds agent'
+  foreach ($hive in $uninstallHives){
+    try {
+      $FoundTargets += Get-ItemProperty -Path $hive -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -match $patterns }
+    } catch {}
+  }
+
+  # 4) Uninstall (wait; suppress chatter)
+  if ($FoundTargets) {
+    foreach ($app in $FoundTargets) {
+      $name = $app.DisplayName
+      $uninst = $app.UninstallString
+      if (-not $uninst) { continue }
+
+      $file = $null; $args = $null
+      if ($uninst -match '(?i)msiexec') {
+        $args = $uninst -replace '(?i)msiexec\.exe','' -replace '(?i)/I','/X' -replace '(?i)/x','/X'
+        if ($args -notmatch '(?i)/qn')        { $args = "$args /qn" }
+        if ($args -notmatch '(?i)/norestart') { $args = "$args /norestart" }
+        $file = "$env:WINDIR\System32\msiexec.exe"
+      } else {
+        if ($uninst.StartsWith('"')) {
+          $file = $uninst.Substring(1, $uninst.IndexOf('"',1)-1)
+          $args = $uninst.Substring($uninst.IndexOf('"',1)+1).Trim()
+        } else {
+          $parts = $uninst.Split(' ',2)
+          $file  = $parts[0]
+          $args  = if ($parts.Count -gt 1) { $parts[1] } else { "" }
+        }
+        if ($args -notmatch '(?i)/quiet|/qn|/silent|/s(?!e)') { $args = "$args /quiet" }
+        if ($args -notmatch '(?i)/norestart')                 { $args = "$args /norestart" }
+      }
+
+      try {
+        $p = Start-Process -FilePath $file -ArgumentList $args -Wait -PassThru -ErrorAction Stop
+        $ec = $p.ExitCode
+        if ($ec -ne 0 -and $ec -ne 3010 -and $ec -ne 1605 -and $ec -ne 1614 -and $ec -ne 1612) {
+          # mark non-fatal; continue cleanup anyway
+          if ($ExitCode -eq 0) { $ExitCode = 1 }
+        }
+      } catch {
+        if ($ExitCode -eq 0) { $ExitCode = 1 }
+      }
+    }
+  }
+
+  # 5) Filesystem cleanup (after uninstall)
+  foreach ($p in $GeneralPaths) {
+    if (Test-Path $p) {
+      try {
+        Get-ChildItem -Path $p -Recurse -Force -ErrorAction SilentlyContinue | ForEach-Object {
+          try { $_.Attributes='Normal' } catch {}
+        }
+        Remove-Item -Path $p -Recurse -Force -ErrorAction SilentlyContinue
+      } catch {}
+    }
+  }
+
+  foreach ($cpath in $CertFoldersFS) {
+    if (Test-Path $cpath) {
+      try {
+        Get-ChildItem -Path $cpath -Force -ErrorAction SilentlyContinue | ForEach-Object {
+          try {
+            if (Test-Path $_.FullName) { $_.Attributes='Normal'; Remove-Item -Path $_.FullName -Recurse -Force -ErrorAction SilentlyContinue }
+          } catch {}
+        }
+      } catch {}
+    }
+  }
+
+  # 6) CertLM purge: LocalMachine -> "SolarWinds Agent" -> Certificates
+  try {
+    $store = New-Object System.Security.Cryptography.X509Certificates.X509Store('SolarWinds Agent', 'LocalMachine')
+    $store.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite)
+    $certs = @($store.Certificates)
+    if ($certs.Count -gt 0) {
+      foreach ($c in $certs) {
+        try { $store.Remove($c); $RemovedCerts++ } catch {}
+      }
+    }
+    $store.Close()
+  } catch {}
+
+  # Double-check with provider path
+  try {
+    $provPath = 'Cert:\LocalMachine\SolarWinds Agent'
+    if (Test-Path $provPath) {
+      $provCerts = Get-ChildItem -Path $provPath -ErrorAction SilentlyContinue
+      if ($provCerts) {
+        foreach ($pc in $provCerts) {
+          try { Remove-Item -Path $pc.PSPath -Force -ErrorAction SilentlyContinue; $RemovedCerts++ } catch {}
+        }
+      }
+    }
+  } catch {}
+
+  # 7) Verify leftovers (dirs + cert store count)
+  foreach ($p in ($GeneralPaths + $CertFoldersFS)) { if (Test-Path $p) { $LeftoverDirs += $p } }
+
+  try {
+    $s = New-Object System.Security.Cryptography.X509Certificates.X509Store('SolarWinds Agent','LocalMachine')
+    $s.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadOnly)
+    $StoreLeft = $s.Certificates.Count
+    $s.Close()
+  } catch { $StoreLeft = 0 }
+
+  if ($StrictCleanup -and ( ($LeftoverDirs.Count -gt 0) -or ($StoreLeft -gt 0) )) {
+    $ExitCode = 2
+  }
+
+} catch {
+  $ExitCode = 1
+} finally {
+  if ($TranscriptPath) { try { Stop-Transcript | Out-Null } catch {} }
+  # SINGLE, FINAL SUMMARY LINE (good for SCCM logs)
+  # Format: [Tag] result; metrics...
+  $result = switch ($ExitCode) {
+    0 { 'SUCCESS' }
+    2 { 'SUCCESS_WITH_LEFTOVERS' }
+    default { 'FAIL' }
+  }
+  Write-Host ("[SolarWinds-Uninstall] Result={0}; UninstallTargets={1}; CertsRemoved={2}; LeftoverDirs={3}; StoreLeft={4}" -f $result, ($FoundTargets.Count), $RemovedCerts, ($LeftoverDirs.Count), $StoreLeft)
+  exit $ExitCode
+}
