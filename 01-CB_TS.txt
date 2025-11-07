@@ -205,3 +205,39 @@ New-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control' -Name ServicesPipeTime
 Restart-Computer
 
 14 #########################################################################################
+
+
+# === Ajuste seus valores ===
+$msi  = 'C:\Windows\ccmcache\So\carbon_black-installer_vista_win7_win8-64-4.0.3.2029.msi'
+$log  = 'C:\Temp\cb_repair_again.log'
+$code = 'SEU_CODIGO'   # COMPANY_CODE
+
+# === Preparar ===
+New-Item -ItemType Directory -Path (Split-Path $log) -Force | Out-Null
+$taskName = 'CB_RepairOnce_' + ([guid]::NewGuid().ToString('N'))
+
+# === Criar tarefa agendada rodando como SYSTEM (Highest) ===
+$action     = New-ScheduledTaskAction -Execute 'msiexec.exe' -Argument "/fvamus `"$msi`" /qn /l*v `"$log`" COMPANY_CODE=$code"
+$principal  = New-ScheduledTaskPrincipal -UserId 'SYSTEM' -RunLevel Highest
+$settings   = New-ScheduledTaskSettingsSet -StartWhenAvailable -Compatibility Win8
+$task       = New-ScheduledTask -Action $action -Principal $principal -Settings $settings
+Register-ScheduledTask -TaskName $taskName -InputObject $task | Out-Null
+
+# === Rodar e esperar ===
+Start-ScheduledTask -TaskName $taskName
+# espera até a tarefa finalizar (timeout 10 min)
+$deadline = (Get-Date).AddMinutes(10)
+do {
+  Start-Sleep 2
+  $state = (Get-ScheduledTask -TaskName $taskName).State
+} while ($state -eq 'Running' -and (Get-Date) -lt $deadline)
+
+# coleta resultado e limpa a tarefa
+$last = Get-ScheduledTaskInfo -TaskName $taskName
+Unregister-ScheduledTask -TaskName $taskName -Confirm:$false
+
+# === Verificação pós-repair ===
+"TaskLastRunTime: $($last.LastRunTime)  LastTaskResult: $($last.LastTaskResult)"
+"RepCLI exists? " + (Test-Path 'C:\Program Files\Confer\RepCLI.exe')
+
+15 #########################################################################################
