@@ -2,7 +2,30 @@ Get-DnsClientServerAddress -AddressFamily IPv4 | Select InterfaceAlias,ServerAdd
 
 
 ####################################
+Clique Edit… no TranscriptPath.
+
+Preencha assim:
+
+Required: False
+
+Hidden: False
+
+Data type: String
+
+Minimum length: 1
+
+Maximum length: 1024
+
+Regular expression: cole exatamente esta:
+
 ^(?i)(?:C:\\Windows\\Temp\\|C:\\Logs\\)[\w\-. \\]+?(?:\.log|\.txt)$
 
+
+Custom error (opcional):
+
+Use a .log or .txt under C:\Windows\Temp\ or C:\Logs\
+
+
+Default value (opcional, mas útil):
 
 C:\Windows\Temp\SW-Uninstall.log
