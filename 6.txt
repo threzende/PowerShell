@@ -1,1 +1,8 @@
 Get-DnsClientServerAddress -AddressFamily IPv4 | Select InterfaceAlias,ServerAddresses
+
+
+####################################
+^(?i)(?:C:\\Windows\\Temp\\|C:\\Logs\\)[\w\-. \\]+?(?:\.log|\.txt)$
+
+
+C:\Windows\Temp\SW-Uninstall.log
