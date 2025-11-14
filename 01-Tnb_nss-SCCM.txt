@@ -1,4 +1,4 @@
-1 ####################################
+1 #####################################################################################
 
 
 $NessusPath = "C:\Program Files\Tenable\Nessus\sbin\nessuscli.exe"
@@ -12,9 +12,36 @@ if (Test-Path $NessusPath) {
 }
 
 
-2 ##########################
+2 #####################################################################################
 
 Get-ChildItem "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" |
     Get-ItemProperty |
     Where-Object { $_.DisplayName -like "*Nessus*" } |
     Select-Object DisplayName, DisplayVersion, PSChildName
+
+
+
+3 #####################################################################################
+
+$paths = @(
+  "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*",
+  "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*"
+)
+
+Get-ItemProperty -Path $paths -ErrorAction SilentlyContinue |
+  Where-Object { $_.DisplayName -like "Nessus*" } |
+  Select-Object `
+    DisplayName,
+    DisplayVersion,
+    UninstallString,
+    @{ Name = "ProductCode"; Expression = {
+        if ($_.PSChildName -match '^{.*}$') {
+            $_.PSChildName              # muitas vezes o GUID está no nome da chave
+        }
+        elseif ($_.UninstallString -match '{[0-9A-F\-]+}') {
+            $matches[0]                 # senão, pega o GUID de dentro do UninstallString
+        }
+      }
+    }
+
+4 #####################################################################################
