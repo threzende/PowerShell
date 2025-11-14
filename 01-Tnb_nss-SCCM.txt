@@ -45,3 +45,21 @@ Get-ItemProperty -Path $paths -ErrorAction SilentlyContinue |
     }
 
 4 #####################################################################################
+
+$paths = @(
+  "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*",
+  "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*"
+)
+
+$nessus = Get-ItemProperty -Path $paths -ErrorAction SilentlyContinue |
+  Where-Object { $_.DisplayName -like "*Nessus Agent*" -or $_.DisplayName -like "*Tenable Nessus*" } |
+  Select-Object -First 1
+
+if ($nessus -and $nessus.DisplayVersion) {
+  Write-Output $nessus.DisplayVersion
+} else {
+  Write-Output "Nessus nao instalado"
+}
+
+
+5 #####################################################################################
