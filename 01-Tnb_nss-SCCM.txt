@@ -12,4 +12,9 @@ if (Test-Path $NessusPath) {
 }
 
 
-2##########################
+2 ##########################
+
+Get-ChildItem "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" |
+    Get-ItemProperty |
+    Where-Object { $_.DisplayName -like "*Nessus*" } |
+    Select-Object DisplayName, DisplayVersion, PSChildName
