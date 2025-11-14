@@ -1,0 +1,15 @@
+1 ####################################
+
+
+$NessusPath = "C:\Program Files\Tenable\Nessus\sbin\nessuscli.exe"
+
+
+if (Test-Path $NessusPath) {
+    $UUID = & $NessusPath fetch --uuid
+    Write-Output "Nessus UUID: $UUID"
+} else {
+    Write-Output "Nessus não encontrado neste host."
+}
+
+
+2##########################
