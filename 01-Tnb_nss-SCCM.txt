@@ -385,4 +385,87 @@ if ($version -lt $minVersion) {
     return $false
 }
 
-12 #####################################################################################
+12a #####################################################################################
+
+
+$minVersion  = [version]"11.0.1.2008"
+
+$paths = @(
+  "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*",
+  "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*"
+)
+
+$reg = Get-ItemProperty -Path $paths -ErrorAction SilentlyContinue |
+  Where-Object { $_.DisplayName -like "*Nessus*" } |
+  Select-Object -First 1 DisplayName, DisplayVersion
+
+$shouldInstall = $false
+
+if (-not $reg) {
+    $shouldInstall = $true
+} else {
+    $version = $null
+    try {
+        $raw = [string]$reg.DisplayVersion
+        $parts = $raw -split '\.'
+        if ($parts.Count -gt 4) {
+            $parts = $parts[0..3]
+        }
+        $normalized = ($parts -join '.')
+        $version = [version]$normalized
+
+        if ($version -lt $minVersion) {
+            $shouldInstall = $true
+        } else {
+            $shouldInstall = $false
+        }
+    } catch {
+        $shouldInstall = $false
+    }
+}
+
+if ($shouldInstall) {
+    Write-Output "WOULD_INSTALL=TRUE"
+} else {
+    Write-Output "WOULD_INSTALL=FALSE"
+}
+
+
+12b #####################################################################################
+
+$minVersion  = [version]"11.0.1.2008"
+
+$paths = @(
+  "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*",
+  "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*"
+)
+
+$reg = Get-ItemProperty -Path $paths -ErrorAction SilentlyContinue |
+  Where-Object { $_.DisplayName -like "*Nessus*" } |
+  Select-Object -First 1 DisplayName, DisplayVersion
+
+if (-not $reg) {
+    return $true
+}
+
+$version = $null
+try {
+    $raw = [string]$reg.DisplayVersion
+    $parts = $raw -split '\.'
+    if ($parts.Count -gt 4) {
+        $parts = $parts[0..3]
+    }
+    $normalized = ($parts -join '.')
+    $version = [version]$normalized
+} catch {
+    return $false
+}
+
+if ($version -lt $minVersion) {
+    return $true
+} else {
+    return $false
+}
+
+
+13 #####################################################################################
