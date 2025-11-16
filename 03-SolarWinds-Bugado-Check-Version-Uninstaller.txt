@@ -53,12 +53,12 @@ $resultados = foreach ($path in $uninstallPaths) {
 
 if ($resultados) {
     Write-Host ""
-    Write-Host "Found SolarWinds installations different from version $TargetVersionPrefix:"
+    Write-Host ("Found SolarWinds installations different from version {0}:" -f $TargetVersionPrefix)
     Write-Host ""
     $resultados | Sort-Object Name, Version | Format-Table -AutoSize
 } else {
     Write-Host ""
-    Write-Host "Only SolarWinds $TargetVersionPrefix found (or no SolarWinds installed)."
+    Write-Host ("Only SolarWinds {0} found (or no SolarWinds installed)." -f $TargetVersionPrefix)
     Write-Host ""
 }
 
