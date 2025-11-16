@@ -1,14 +1,28 @@
-Get-ChildItem "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
-              "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" |
-    Get-ItemProperty |
-    Where-Object { $_.DisplayName -like "*SolarWinds*" } |
-    Sort-Object {[version]($_.DisplayVersion)} -Ascending |
-    ForEach-Object {
-        "$($_.DisplayVersion) - $($_.PSChildName)"
+$uninstallPaths = @(
+    "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+    "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"
+)
+
+$results = foreach ($path in $uninstallPaths) {
+    if (Test-Path $path) {
+        Get-ChildItem $path | ForEach-Object {
+            $item = Get-ItemProperty $_.PsPath
+            if ($item.DisplayName -like "*SolarWinds*" -and $null -ne $item.DisplayVersion) {
+                $major = ($item.DisplayVersion -split '\.')[0]
+                [PSCustomObject]@{
+                    MajorVersion = $major
+                    ProductId    = $_.PSChildName
+                }
+            }
+        }
     }
+}
 
-
-
+$results |
+    Sort-Object {[int]$_.MajorVersion}, ProductId -Unique |
+    ForEach-Object {
+        "{0} {1}" -f $_.MajorVersion, $_.ProductId
+    }
 
 
 
