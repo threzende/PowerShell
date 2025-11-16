@@ -6,3 +6,58 @@ Get-ChildItem "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
     ForEach-Object {
         "$($_.DisplayVersion) - $($_.PSChildName)"
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2 ##########################################################################################
+
+# === CONFIGURACAO ===
+# Versão que você quer manter (não mostrar)
+$TargetVersionPrefix = "2025"
+
+# === CODIGO ===
+$uninstallPaths = @(
+    "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+    "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"
+)
+
+$resultados = foreach ($path in $uninstallPaths) {
+    if (Test-Path $path) {
+        Get-ChildItem $path | ForEach-Object {
+            $item = Get-ItemProperty $_.PsPath
+
+            if ($item.DisplayName -like "*SolarWinds*" -and
+                $null -ne $item.DisplayVersion -and
+                $item.DisplayVersion -notlike "$TargetVersionPrefix*") {
+
+                [PSCustomObject]@{
+                    Nome            = $item.DisplayName
+                    Versao          = $item.DisplayVersion
+                    ProductId       = $_.PSChildName   # normalmente o GUID do produto
+                    UninstallString = $item.UninstallString
+                    RegistryPath    = $_.PsPath
+                }
+            }
+        }
+    }
+}
+
+if ($resultados) {
+    Write-Host "Foram encontrados SolarWinds diferentes da versão $TargetVersionPrefix:`n" -ForegroundColor Yellow
+    $resultados | Sort-Object Nome, Versao | Format-Table -AutoSize
+} else {
+    Write-Host "Somente SolarWinds $TargetVersionPrefix encontrado (ou nenhum SolarWinds instalado)." -ForegroundColor Green
+}
+
