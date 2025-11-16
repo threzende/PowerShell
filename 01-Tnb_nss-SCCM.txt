@@ -118,3 +118,50 @@ return $false
 
 
 7 #####################################################################################
+
+$minVersion = [version]"11.0.1.2008"
+$folderPath = "C:\Program Files\Tenable\Nessus Agent"
+$cliPath = Join-Path $folderPath "nessuscli.exe"
+
+Write-Host "Versão mínima considerada: $minVersion"
+Write-Host "Pasta do Nessus: $folderPath"
+Write-Host "Caminho do nessuscli: $cliPath"
+Write-Host ""
+
+if (-not (Test-Path $folderPath)) {
+    Write-Host "Resultado: pasta do Nessus NÃO encontrada."
+    Write-Host "Decisão (lógica SCCM): INSTALAR"
+    return
+}
+
+Write-Host "Resultado: pasta do Nessus encontrada."
+
+if (-not (Test-Path $cliPath)) {
+    Write-Host "Resultado: nessuscli.exe NÃO encontrado dentro da pasta."
+    Write-Host "Decisão (lógica SCCM): NÃO INSTALAR"
+    return
+}
+
+Write-Host "Resultado: nessuscli.exe encontrado. Lendo versão..."
+Write-Host ""
+
+try {
+    $cliVersion = [version](Get-Item $cliPath).VersionInfo.FileVersion
+    Write-Host "Versão encontrada no nessuscli.exe: $cliVersion"
+} catch {
+    Write-Host "Erro ao ler a versão do nessuscli.exe."
+    Write-Host "Decisão (lógica SCCM): NÃO INSTALAR"
+    return
+}
+
+if ($cliVersion -lt $minVersion) {
+    Write-Host ""
+    Write-Host "Comparação: $cliVersion é MENOR que $minVersion"
+    Write-Host "Decisão (lógica SCCM): INSTALAR"
+} else {
+    Write-Host ""
+    Write-Host "Comparação: $cliVersion é MAIOR ou IGUAL a $minVersion"
+    Write-Host "Decisão (lógica SCCM): NÃO INSTALAR"
+}
+
+8 #####################################################################################
