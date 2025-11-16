@@ -165,3 +165,80 @@ if ($cliVersion -lt $minVersion) {
 }
 
 8 #####################################################################################
+
+
+$minVersion  = [version]"11.0.1.2008"
+$folderPath  = "C:\Program Files\Tenable\Nessus Agent"
+$cliPath     = Join-Path $folderPath "nessuscli.exe"
+
+$paths = @(
+  "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*",
+  "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*"
+)
+
+Write-Host "Versão mínima considerada........: $minVersion"
+Write-Host "Pasta do Nessus..................: $folderPath"
+Write-Host "Caminho do nessuscli.............: $cliPath"
+Write-Host ""
+
+$reg = Get-ItemProperty -Path $paths -ErrorAction SilentlyContinue |
+  Where-Object { $_.DisplayName -like "*Nessus*" } |
+  Select-Object -First 1 DisplayName, DisplayVersion
+
+if (-not $reg) {
+    Write-Host "Nessus NÃO encontrado no registro."
+    Write-Host "Decisão (lógica SCCM): INSTALAR"
+    return
+}
+
+Write-Host "Encontrado no registro:"
+Write-Host "  Nome.........: $($reg.DisplayName)"
+Write-Host "  Versão (reg).: $($reg.DisplayVersion)"
+Write-Host ""
+
+if (-not (Test-Path $folderPath)) {
+    Write-Host "Pasta do Nessus NÃO encontrada em '$folderPath'."
+    Write-Host "Decisão (lógica SCCM): INSTALAR"
+    return
+}
+
+Write-Host "Pasta do Nessus encontrada."
+
+if (-not (Test-Path $cliPath)) {
+    Write-Host "nessuscli.exe NÃO encontrado dentro da pasta."
+    Write-Host "Decisão (lógica SCCM): NÃO INSTALAR"
+    return
+}
+
+Write-Host "nessuscli.exe encontrado. Lendo versões..."
+Write-Host ""
+
+try {
+    $cliVersion = [version](Get-Item $cliPath).VersionInfo.FileVersion
+    Write-Host "Versão do arquivo nessuscli.exe..: $cliVersion"
+} catch {
+    Write-Host "Erro ao ler a versão do arquivo nessuscli.exe."
+}
+
+$version = $null
+try {
+    $version = [version]$reg.DisplayVersion
+} catch {
+    Write-Host "Não consegui converter DisplayVersion em [version]."
+    Write-Host "Decisão (lógica SCCM): NÃO INSTALAR"
+    return
+}
+
+Write-Host "Versão usada para comparação......: $version"
+Write-Host ""
+
+if ($version -lt $minVersion) {
+    Write-Host "Comparação: $version é MENOR que $minVersion"
+    Write-Host "Decisão (lógica SCCM): INSTALAR"
+} else {
+    Write-Host "Comparação: $version é MAIOR ou IGUAL a $minVersion"
+    Write-Host "Decisão (lógica SCCM): NÃO INSTALAR"
+}
+
+
+9 #####################################################################################
