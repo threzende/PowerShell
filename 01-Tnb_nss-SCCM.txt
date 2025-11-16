@@ -86,3 +86,35 @@ if ($version -eq "11.0.1" -or $version -eq "11.0.2") {
 
 
 6 #####################################################################################
+
+
+$minVersion = [version]"11.0.1.2008"
+$folderPath = "C:\Program Files\Tenable\Nessus Agent"
+$cliPath = Join-Path $folderPath "nessuscli.exe"
+
+if (-not (Test-Path $folderPath)) {
+    return $true
+}
+
+if ((Test-Path $folderPath) -and -not (Test-Path $cliPath)) {
+    return $false
+}
+
+if (Test-Path $cliPath) {
+    try {
+        $cliVersion = [version](Get-Item $cliPath).VersionInfo.FileVersion
+    } catch {
+        return $false
+    }
+
+    if ($cliVersion -lt $minVersion) {
+        return $true
+    } else {
+        return $false
+    }
+}
+
+return $false
+
+
+7 #####################################################################################
