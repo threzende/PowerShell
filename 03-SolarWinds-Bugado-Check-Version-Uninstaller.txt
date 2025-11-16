@@ -2,7 +2,10 @@ Get-ChildItem "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
               "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" |
     Get-ItemProperty |
     Where-Object { $_.DisplayName -like "*SolarWinds*" } |
-    Sort-Object {[version]($_.DisplayVersion)} -Descending |   # ou -Ascending
     ForEach-Object {
-        "$($_.DisplayVersion) - $($_.PSChildName)"
+        $ver = $null
+        try { $ver = [version]$_.DisplayVersion } catch {}
+        if ($ver -lt [version]"25.0.0.0") {
+            "$($_.DisplayVersion) - $($_.PSChildName)"
+        }
     }
