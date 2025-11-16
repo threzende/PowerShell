@@ -71,18 +71,18 @@ try {
     # Tenta ler o valor "Version"
     $version = (Get-ItemProperty -Path $regPath -ErrorAction Stop).Version
 } catch {
-    # Se não encontrar a chave, sai como "não detectado"
-    exit 1
+    Write-Output "Nessus não encontrado no registro"
+    return
 }
 
 # Compara a versão
 if ($version -eq "11.0.1" -or $version -eq "11.0.2") {
     # Nessus detectado com versão bloqueada
-    Write-Output "Detected"
-    exit 0
+    Write-Output "Detected - versão bloqueada: $version"
 } else {
-    # Versão diferente ou não instalada
-    exit 1
+    # Mostra a versão encontrada
+    Write-Output "Versão encontrada: $version"
 }
+
 
 6 #####################################################################################
