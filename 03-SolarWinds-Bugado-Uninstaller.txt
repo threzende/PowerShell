@@ -1,0 +1,8 @@
+Get-ChildItem "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+              "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" |
+    Get-ItemProperty |
+    Where-Object { $_.DisplayName -like "*SolarWinds*" } |
+    ForEach-Object {
+        # Monta saída simples: Versão + ProductID
+        "$($_.DisplayVersion) - $($_.PSChildName)"
+    }
