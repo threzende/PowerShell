@@ -76,3 +76,32 @@ if ($resultados) {
     Write-Host ""
 }
 
+
+
+
+3 - uninstaller ####################################################################################
+
+param(
+    [Parameter(Mandatory = $true)]
+    [string]$ProductCode
+)
+
+$codes = $ProductCode -split '[,; ]+' | Where-Object { $_ }
+$anySuccess = $false
+
+foreach ($code in $codes) {
+    Write-Output ("Uninstalling {0}..." -f $code)
+    $p = Start-Process "msiexec.exe" -ArgumentList "/x $code /qn /norestart" -Wait -PassThru
+    Write-Output ("Product {0} finished with exit code {1}" -f $code, $p.ExitCode)
+    if ($p.ExitCode -eq 0) {
+        $anySuccess = $true
+    }
+}
+
+if ($anySuccess) {
+    Write-Output "Program has been removed."
+} else {
+    Write-Output "No products were successfully removed."
+}
+
+exit 0
