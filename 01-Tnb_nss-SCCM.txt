@@ -242,3 +242,115 @@ if ($version -lt $minVersion) {
 
 
 9 #####################################################################################
+
+
+$minVersion  = [version]"11.0.1.2008"
+$folderPath  = "C:\Program Files\Tenable\Nessus Agent"
+$cliPath     = Join-Path $folderPath "nessuscli.exe"
+
+$paths = @(
+  "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*",
+  "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*"
+)
+
+Write-Output "Minimum required version.........: $minVersion"
+Write-Output "Nessus folder path...............: $folderPath"
+Write-Output "nessuscli.exe path...............: $cliPath"
+Write-Output ""
+
+$reg = Get-ItemProperty -Path $paths -ErrorAction SilentlyContinue |
+  Where-Object { $_.DisplayName -like "*Nessus*" } |
+  Select-Object -First 1 DisplayName, DisplayVersion
+
+if (-not $reg) {
+    Write-Output "Nessus not found in registry."
+    Write-Output "Decision: WOULD INSTALL (not installed)."
+    return
+}
+
+Write-Output "Found in registry:"
+Write-Output "  DisplayName....................: $($reg.DisplayName)"
+Write-Output "  DisplayVersion.................: $($reg.DisplayVersion)"
+Write-Output ""
+
+if (-not (Test-Path $folderPath)) {
+    Write-Output "Nessus folder not found."
+    Write-Output "Decision: WOULD INSTALL (inconsistent state, no folder)."
+    return
+}
+
+Write-Output "Nessus folder found."
+
+if (-not (Test-Path $cliPath)) {
+    Write-Output "nessuscli.exe NOT found in folder."
+    Write-Output "Decision: WOULD NOT INSTALL (bug case: folder without cli)."
+    return
+}
+
+Write-Output "nessuscli.exe found."
+Write-Output ""
+
+$version = $null
+try {
+    $version = [version]$reg.DisplayVersion
+    Write-Output "Version used for comparison......: $version"
+} catch {
+    Write-Output "Could not convert DisplayVersion to [version]."
+    Write-Output "Decision: WOULD NOT INSTALL."
+    return
+}
+
+Write-Output ""
+
+if ($version -lt $minVersion) {
+    Write-Output "Comparison: $version is LOWER than $minVersion"
+    Write-Output "Decision: WOULD INSTALL (upgrade needed)."
+} else {
+    Write-Output "Comparison: $version is GREATER or EQUAL to $minVersion"
+    Write-Output "Decision: WOULD NOT INSTALL (already good)."
+}
+
+
+10 #####################################################################################
+
+
+$minVersion  = [version]"11.0.1.2008"
+$folderPath  = "C:\Program Files\Tenable\Nessus Agent"
+$cliPath     = Join-Path $folderPath "nessuscli.exe"
+
+$paths = @(
+  "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*",
+  "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*"
+)
+
+$reg = Get-ItemProperty -Path $paths -ErrorAction SilentlyContinue |
+  Where-Object { $_.DisplayName -like "*Nessus*" } |
+  Select-Object -First 1 DisplayName, DisplayVersion
+
+if (-not $reg) {
+    return $true
+}
+
+if (-not (Test-Path $folderPath)) {
+    return $true
+}
+
+if (-not (Test-Path $cliPath)) {
+    return $false
+}
+
+$version = $null
+try {
+    $version = [version]$reg.DisplayVersion
+} catch {
+    return $false
+}
+
+if ($version -lt $minVersion) {
+    return $true
+} else {
+    return $false
+}
+
+
+11 #####################################################################################
