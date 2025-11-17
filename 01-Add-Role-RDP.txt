@@ -1,0 +1,30 @@
+1 ####################################################################################################################
+
+Como funciona na prática
+
+Baixar/pegar a ISO do Windows Server
+
+Tem que ser exatamente a mesma versão que está instalada (ex.: 2016 Standard, 2019 Datacenter, etc.).
+
+Monta a ISO no servidor (ela vira, por exemplo, unidade D:).
+
+Usar DISM apontando pro DVD/ISO
+
+No Prompt de Comando (Admin):
+
+DISM /Online /Cleanup-Image /RestoreHealth /Source:wim:D:\sources\install.wim:1 /LimitAccess
+
+
+Ajusta a letra (D:) para a unidade onde está montada a ISO.
+
+Depois tentar instalar o RDS de novo
+
+Pelo Server Manager ou via PowerShell:
+
+Install-WindowsFeature RDS-RD-Server -IncludeAllSubFeature -IncludeManagementTools -Restart
+
+
+(o nome exato da feature pode variar um pouco, mas geralmente é RDS-RD-Server para Session Host).
+
+
+2 ####################################################################################################################
