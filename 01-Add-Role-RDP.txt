@@ -128,3 +128,5 @@ Se você rodar o Dism /Get-WimInfo e me contar quais índices aparecem e qual ed
 
 
 4 ####################################################################################################################
+
+DISM /Online /Cleanup-Image /RestoreHealth /Source:D:\sources\install.wim:1 /LimitAccess
