@@ -28,3 +28,40 @@ Install-WindowsFeature RDS-RD-Server -IncludeAllSubFeature -IncludeManagementToo
 
 
 2 ####################################################################################################################
+
+
+1. Habilitar os serviços necessários
+
+No Prompt de Comando (Administrador), roda:
+
+sc config trustedinstaller start= demand
+net start trustedinstaller
+
+sc config wuauserv start= demand
+sc config bits start= demand
+net start wuauserv
+net start bits
+
+
+Atenção: tem mesmo esse espaço depois do start= (é assim que o sc funciona).
+
+Se algum net start disser que o serviço já está iniciado, beleza.
+
+2. Rodar o DISM novamente
+
+Ainda no prompt:
+
+DISM /Online /Cleanup-Image /RestoreHealth
+
+
+Se sua empresa bloqueia Windows Update, o ideal é rodar apontando para a ISO do Windows Server:
+
+DISM /Online /Cleanup-Image /RestoreHealth /Source:wim:D:\sources\install.wim:1 /LimitAccess
+
+
+(troca D: pela letra da unidade onde a ISO está montada.)
+
+Quando terminar, reinicia o servidor.
+
+
+3 ####################################################################################################################
