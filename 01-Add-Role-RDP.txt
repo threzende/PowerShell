@@ -133,3 +133,7 @@ DISM /Online /Cleanup-Image /RestoreHealth /Source:D:\sources\install.wim:1 /Lim
 
 
 5 ####################################################################################################################
+
+Install-WindowsFeature -Name RDS-RD-Server -Source:\\servidorvalido\sxs
+
+6 ####################################################################################################################
