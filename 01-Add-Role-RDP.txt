@@ -65,3 +65,66 @@ Quando terminar, reinicia o servidor.
 
 
 3 ####################################################################################################################
+
+
+1. Conferir se a ISO é mesmo do Windows Server 2019
+Seu build é 10.0.17763.x → Windows Server 2019.
+No prompt admin roda:
+systeminfo | findstr /B /C:"OS Name" /C:"OS Version"
+
+A ISO montada em D: também tem que ser Windows Server 2019 (e mesma linguagem).
+Se for ISO de Windows 10 ou outra versão de Server, o DISM nunca vai achar os componentes.
+
+2. Ver os índices dentro do install.wim (ou install.esd)
+No prompt admin:
+Dism /Get-WimInfo /WimFile:D:\sources\install.wim
+
+Se em vez de install.wim tiver install.esd, usa:
+Dism /Get-WimInfo /WimFile:D:\sources\install.esd
+
+Ele vai listar algo parecido com:
+
+
+Index 1 – Windows Server 2019 Standard (Server Core)
+
+
+Index 2 – Windows Server 2019 Standard (Desktop Experience)
+
+
+Index 3 – Windows Server 2019 Datacenter (Server Core)
+
+
+Index 4 – Windows Server 2019 Datacenter (Desktop Experience)
+
+
+Escolhe o índice que bate com o que está instalado no servidor (ex.: Standard Desktop → normalmente 2, Datacenter Desktop → normalmente 4).
+
+3. Rodar o DISM com o índice correto
+Se for install.wim e, por exemplo, o índice certo for 2:
+DISM /Online /Cleanup-Image /RestoreHealth /Source:wim:D:\sources\install.wim:2 /LimitAccess
+
+Se for install.esd:
+DISM /Online /Cleanup-Image /RestoreHealth /Source:esd:D:\sources\install.esd:2 /LimitAccess
+
+Deixa terminar. Se der sucesso, faz:
+sfc /scannow
+
+Reinicia o servidor e tenta instalar o Remote Desktop Services de novo.
+
+4. Se ainda der 0x800f081f
+Aí as causas mais comuns são:
+
+
+ISO errada (Windows 10 ou outra versão/idioma de Server).
+
+
+install.wim/.esd corrompido/copiadinho pela metade.
+
+
+Nesse caso, baixa outra ISO do Windows Server 2019 (mesma edição/idioma), monta de novo e repete os passos 2 e 3.
+
+Se você rodar o Dism /Get-WimInfo e me contar quais índices aparecem e qual edição está instalada (Standard/Datacenter, Core/Desktop) eu consigo te dizer qual número usar direto no comando.
+
+
+
+4 ####################################################################################################################
