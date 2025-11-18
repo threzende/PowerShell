@@ -137,3 +137,19 @@ DISM /Online /Cleanup-Image /RestoreHealth /Source:D:\sources\install.wim:1 /Lim
 Install-WindowsFeature -Name RDS-RD-Server -Source:\\servidorvalido\sxs
 
 6 ####################################################################################################################
+
+
+Execute os seguintes comandos no CMD "Prompt de Comando" em modo administrador:
+net stop bits
+net stop wuauserv
+net stop appidsvc
+net stop cryptsvc
+ren C:\Windows\SoftwareDistribution SoftwareDistribution.old
+ren C:\Windows\System32\catroot2 catroot2.old
+net start bits
+net start wuauserv
+net start appidsvc
+net start cryptsvc
+
+
+7 ####################################################################################################################
