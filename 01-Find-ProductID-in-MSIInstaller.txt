@@ -1,0 +1,9 @@
+$msiPath  = 'C:\Users\LAB\Downloads\googlechromestandaloneenterprise64.msi'
+
+$installer = New-Object -ComObject WindowsInstaller.Installer
+$db        = $installer.OpenDatabase($msiPath, 0)
+$view      = $db.OpenView("SELECT Value FROM Property WHERE Property = 'ProductCode'")
+$view.Execute()
+$record    = $view.Fetch()
+
+$record.StringData(1)
