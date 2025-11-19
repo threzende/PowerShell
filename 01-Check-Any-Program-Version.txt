@@ -1,0 +1,61 @@
+param(
+    [Parameter(Mandatory = $true)]
+    [string]$ProductName
+)
+
+function Get-InstalledApp {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$NamePattern
+    )
+
+    $paths = @(
+        "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+        "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"
+    )
+
+    $results = @()
+
+    foreach ($path in $paths) {
+        if (Test-Path $path) {
+            Get-ChildItem $path | ForEach-Object {
+                $props = Get-ItemProperty $_.PsPath -ErrorAction SilentlyContinue
+
+                if ($null -ne $props.DisplayName -and $props.DisplayName -like "*$NamePattern*") {
+                    $results += [PSCustomObject]@{
+                        ComputerName    = $env:COMPUTERNAME
+                        DisplayName     = $props.DisplayName
+                        DisplayVersion  = $props.DisplayVersion
+                        Publisher       = $props.Publisher
+                        InstallLocation = $props.InstallLocation
+                        ProductCode     = $_.PSChildName
+                        UninstallString = $props.UninstallString
+                        RegistryKey     = $_.PsPath
+                    }
+                }
+            }
+        }
+    }
+
+    return $results
+}
+
+$appList = Get-InstalledApp -NamePattern $ProductName
+
+if (-not $appList -or $appList.Count -eq 0) {
+    Write-Output "No products found for '$ProductName'."
+    exit 1
+}
+
+# 1ª saída: só as versões (limpo)
+$appList |
+    Select-Object -ExpandProperty DisplayVersion -Unique |
+    Sort-Object
+
+# Linha em branco
+""
+
+# 2ª parte: detalhes
+$appList |
+    Select-Object ComputerName, DisplayName, DisplayVersion, ProductCode, UninstallString |
+    Format-Table -AutoSize
