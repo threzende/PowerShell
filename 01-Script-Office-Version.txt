@@ -1,23 +1,38 @@
 $filesToCheck = @(
     @{
-        Name            = "epsimp32.flt"
-        Path            = "C:\Program Files (x86)\Common Files\Microsoft Shared\GRPHFLT\epsimp32.flt"
-        ExpectedVersion = "2012.1600.4540.1002"
+        Name            = "wpft632.cnv"
+        Path            = "C:\Program Files (x86)\Common Files\Microsoft Shared\TextConv\wpft632.cnv"
+        ExpectedVersion = ""
     },
     @{
-        Name            = "osproxy.dll"
+        Name            = "osfproxy.dll"
         Path            = "C:\Program Files (x86)\Microsoft Office\Office16\osfproxy.dll"
-        ExpectedVersion = "16.0.5215.1000"
+        ExpectedVersion = ""
+    },
+    @{
+        Name            = "epsomp32.flt"
+        Path            = "C:\Program Files (x86)\Common Files\Microsoft Shared\GRPHFLT\epsomp32.flt"
+        ExpectedVersion = ""
+    },
+    @{
+        Name            = "osf.dll"
+        Path            = "C:\Program Files (x86)\Microsoft Office\Office16\osf.dll"
+        ExpectedVersion = ""
     },
     @{
         Name            = "ose.exe"
         Path            = "C:\Program Files (x86)\Common Files\Microsoft Shared\Source Engine\ose.exe"
-        ExpectedVersion = "16.0.4600.1000"
+        ExpectedVersion = ""
     },
     @{
         Name            = "osetup.dll"
         Path            = "C:\Program Files (x86)\Common Files\Microsoft Shared\OFFICE16\Office Setup Controller\osetup.dll"
-        ExpectedVersion = "16.0.4600.1000"
+        ExpectedVersion = ""
+    },
+    @{
+        Name            = "epsimp32.flt"
+        Path            = "C:\Program Files (x86)\Common Files\Microsoft Shared\GRPHFLT\epsimp32.flt"
+        ExpectedVersion = ""
     }
 )
 
