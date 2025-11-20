@@ -1,0 +1,19 @@
+Title: New Citrix Build for PTASK
+
+During an operation, we identified performance issues (slowness) in one of the systems running on Citrix. A problem ticket was opened, and the proposed solution was to add an additional Citrix server to improve load balancing for this application. As a result, a PTASK was assigned to our team.
+
+To proceed with the build, we needed a formal request.
+
+We asked the responsible person to submit the request, but the process took quite some time and the request was only opened after several follow-ups.
+
+The build was performed using Windows Server 2019 with the NBU template; however, this template is failing during the VDA installation.
+
+We attempted to fix the issue using native Windows tools such as sfc /scannow and DISM Online Repair, but neither approach worked, so we decided to try a different template.
+
+I attempted the installation using the NJ template, which I had successfully tested in another new build where RDS/RDP was installed correctly (a requirement for Citrix), but this template was not booting.
+
+I then tried an earlier version of the NBU 2019 template, but the VDA still did not install.
+
+As the next step, I used an Edis Win2019 template, and with that the Citrix installation completed successfully.
+
+Now I will focus on rebuilding and fixing the NBU 2019 template.
