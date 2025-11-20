@@ -1,0 +1,43 @@
+$clickToRunKeyCandidates = @(
+    "HKLM:\SOFTWARE\Microsoft\Office\ClickToRun\Configuration",
+    "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Office\ClickToRun\Configuration"
+)
+
+$clickToRunKey = $clickToRunKeyCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+$clickToRun    = $null
+
+if ($clickToRunKey) {
+    $clickToRun = Get-ItemProperty -Path $clickToRunKey
+}
+
+$msiBaseKeys = @(
+    "HKLM:\SOFTWARE\Microsoft\Office\16.0\Common\InstalledPackages",
+    "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Office\16.0\Common\InstalledPackages"
+)
+
+$msiProducts = @()
+
+foreach ($k in $msiBaseKeys) {
+    if (Test-Path $k) {
+        $msiProducts += Get-ChildItem $k | Select-Object -ExpandProperty PSChildName
+    }
+}
+
+$msiProducts = $msiProducts | Select-Object -Unique
+
+$installType = "None"
+
+if ($clickToRun) {
+    $installType = "ClickToRun"
+}
+elseif ($msiProducts.Count -gt 0) {
+    $installType = "MSI"
+}
+
+[PSCustomObject]@{
+    ComputerName                 = $env:COMPUTERNAME
+    InstallType                  = $installType
+    ClickToRunVersion            = if ($clickToRun) { $clickToRun.VersionToReport } else { $null }
+    ClickToRunProductReleaseIds  = if ($clickToRun) { $clickToRun.ProductReleaseIds } else { $null }
+    MsiPackages                  = if ($msiProducts) { $msiProducts -join ";" } else { $null }
+}
