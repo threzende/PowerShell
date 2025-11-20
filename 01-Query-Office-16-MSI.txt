@@ -1,0 +1,32 @@
+select distinct
+    SMS_R_SYSTEM.ResourceID,
+    SMS_R_SYSTEM.ResourceType,
+    SMS_R_SYSTEM.Name,
+    SMS_R_SYSTEM.SMSUniqueIdentifier,
+    SMS_R_SYSTEM.ResourceDomainORWorkgroup,
+    SMS_R_SYSTEM.Client
+from SMS_R_SYSTEM
+where
+    SMS_R_SYSTEM.OperatingSystemNameandVersion like "%Server%"
+    and (
+        SMS_R_SYSTEM.ResourceId in (
+            select ARP.ResourceId
+            from SMS_G_System_ADD_REMOVE_PROGRAMS as ARP
+            where
+                   ARP.DisplayName like "%Microsoft Office%2016%"
+                and ARP.DisplayName not like "%Click-to-Run%"
+                and ARP.DisplayName not like "%Language Pack%"
+                and ARP.DisplayName not like "%Proofing%"
+                and ARP.DisplayName not like "%Update%"
+        )
+        or SMS_R_SYSTEM.ResourceId in (
+            select ARP64.ResourceId
+            from SMS_G_System_ADD_REMOVE_PROGRAMS_64 as ARP64
+            where
+                   ARP64.DisplayName like "%Microsoft Office%2016%"
+                and ARP64.DisplayName not like "%Click-to-Run%"
+                and ARP64.DisplayName not like "%Language Pack%"
+                and ARP64.DisplayName not like "%Proofing%"
+                and ARP64.DisplayName not like "%Update%"
+        )
+    )
