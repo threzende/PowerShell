@@ -1,8 +1,0 @@
-Oi Pires, bom dia.
-
-Deu bom naquela máquina de NBU 0031.
-Vou dar uma atualizada no template, mas confesso que aquele template de NBU já foi um problema para a gente anteriormente.
-
-Outro ponto é que já estou conseguindo criar bem os pacotes e deixei umas collections de instalação prontas para o pessoal; já mostrei ao Ian, de Citrix, e ontem à Iza. Espero poder contribuir com vocês. ^^
-
-Peço desculpas de novo pelo transtorno no caso do template; eu sinceramente não estava envolvido na atualização desse template, mas agora já vou até abrir um quadro novo no Azure DevOps para engajar nessa tarefa.
