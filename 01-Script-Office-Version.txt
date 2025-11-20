@@ -1,0 +1,60 @@
+$filesToCheck = @(
+    @{
+        Name            = "epsimp32.flt"
+        Path            = "C:\Program Files (x86)\Common Files\Microsoft Shared\GRPHFLT\epsimp32.flt"
+        ExpectedVersion = "2012.1600.4540.1002"
+    },
+    @{
+        Name            = "osproxy.dll"
+        Path            = "C:\Program Files (x86)\Microsoft Office\Office16\osfproxy.dll"
+        ExpectedVersion = "16.0.5215.1000"
+    },
+    @{
+        Name            = "ose.exe"
+        Path            = "C:\Program Files (x86)\Common Files\Microsoft Shared\Source Engine\ose.exe"
+        ExpectedVersion = "16.0.4600.1000"
+    },
+    @{
+        Name            = "osetup.dll"
+        Path            = "C:\Program Files (x86)\Common Files\Microsoft Shared\OFFICE16\Office Setup Controller\osetup.dll"
+        ExpectedVersion = "16.0.4600.1000"
+    }
+)
+
+$results = foreach ($item in $filesToCheck) {
+    $exists         = Test-Path $item.Path
+    $currentVersion = $null
+    $status         = "FileNotFound"
+
+    if ($exists) {
+        try {
+            $currentVersion = (Get-Item $item.Path).VersionInfo.FileVersion
+
+            if ([string]::IsNullOrWhiteSpace($item.ExpectedVersion)) {
+                $status = "Found"
+            }
+            else {
+                if ([version]$currentVersion -ge [version]$item.ExpectedVersion) {
+                    $status = "OK (>= expected)"
+                }
+                else {
+                    $status = "Outdated (< expected)"
+                }
+            }
+        }
+        catch {
+            $status = "Error: $($_.Exception.Message)"
+        }
+    }
+
+    [PSCustomObject]@{
+        ComputerName    = $env:COMPUTERNAME
+        FileName        = $item.Name
+        Path            = $item.Path
+        CurrentVersion  = $currentVersion
+        ExpectedVersion = $item.ExpectedVersion
+        Status          = $status
+    }
+}
+
+$results | Format-Table -AutoSize
