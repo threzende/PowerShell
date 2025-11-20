@@ -1,0 +1,102 @@
+$officeType = $null
+$officeVersion = $null
+
+$c2rKeyPaths = @(
+    'HKLM:\SOFTWARE\Microsoft\Office\ClickToRun\Configuration',
+    'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Office\ClickToRun\Configuration'
+)
+
+foreach ($k in $c2rKeyPaths) {
+    if (Test-Path $k) {
+        $cfg = Get-ItemProperty -Path $k -ErrorAction SilentlyContinue
+        if ($cfg) {
+            $officeType = 'C2R'
+            $releaseIds = @()
+            if ($cfg.ProductReleaseIds) { $releaseIds += ($cfg.ProductReleaseIds -split ',') }
+            if ($cfg.ProductReleaseId) { $releaseIds += $cfg.ProductReleaseId }
+            $releaseIds = $releaseIds | Where-Object { $_ } | Select-Object -Unique
+            $v = 'Unknown'
+            if ($releaseIds -match 'O365' -or $releaseIds -match '365') { $v = '365' }
+            elseif ($releaseIds -match '2019') { $v = '2019' }
+            elseif ($releaseIds -match '2021') { $v = '2021' }
+            elseif ($releaseIds -match '2016' -or $releaseIds -match '16') { $v = '2016' }
+            $officeVersion = $v
+            break
+        }
+    }
+}
+
+if (-not $officeType) {
+    $paths = @(
+        'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall',
+        'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall'
+    )
+
+    $entries = @()
+    foreach ($p in $paths) {
+        if (Test-Path $p) {
+            $entries += Get-ChildItem $p -ErrorAction SilentlyContinue | ForEach-Object {
+                Get-ItemProperty $_.PSPath -ErrorAction SilentlyContinue
+            } | Where-Object {
+                $_.DisplayName -and (
+                    $_.DisplayName -like '*Microsoft Office*' -or
+                    $_.DisplayName -like 'Microsoft 365*'
+                ) -and
+                $_.DisplayName -notlike '*Click-to-Run*' -and
+                $_.DisplayName -notlike '*Language Pack*' -and
+                $_.DisplayName -notlike '*Proofing*' -and
+                $_.DisplayName -notlike '*Update*'
+            }
+        }
+    }
+
+    if ($entries) {
+        $best = $null
+        $bestVer = $null
+        foreach ($e in $entries) {
+            $dv = $e.DisplayVersion
+            $vObj = $null
+            if ($dv) {
+                try { $vObj = [version]$dv } catch {}
+            }
+            if (-not $best) {
+                $best = $e
+                $bestVer = $vObj
+            } elseif ($vObj -and $bestVer -and $vObj -gt $bestVer) {
+                $best = $e
+                $bestVer = $vObj
+            }
+        }
+
+        if (-not $best) { $best = $entries | Select-Object -First 1 }
+
+        $officeType = 'MSI'
+        $dn = $best.DisplayName
+        $v = 'Unknown'
+        if ($dn -match '2019') { $v = '2019' }
+        elseif ($dn -match '2016') { $v = '2016' }
+        elseif ($dn -match '2021') { $v = '2021' }
+        elseif ($dn -match '2013') { $v = '2013' }
+        elseif ($dn -match '2010') { $v = '2010' }
+        elseif ($dn -match '2007') { $v = '2007' }
+        elseif ($dn -match '2003') { $v = '2003' }
+
+        if ($v -eq 'Unknown' -and $bestVer) {
+            switch ($bestVer.Major) {
+                16 { $v = '2016/2019' }
+                15 { $v = '2013' }
+                14 { $v = '2010' }
+                12 { $v = '2007' }
+                11 { $v = '2003' }
+            }
+        }
+
+        $officeVersion = $v
+    }
+}
+
+if ($officeType) {
+    Write-Output ("{0} {1}" -f $officeType, $officeVersion)
+} else {
+    Write-Output 'Office Not Found'
+}
