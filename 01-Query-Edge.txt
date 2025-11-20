@@ -14,13 +14,11 @@ where
             from SMS_G_System_ADD_REMOVE_PROGRAMS as ARP
             where
                    ARP.DisplayName like "Microsoft Edge%"
-                and ARP.DisplayName not like "%WebView2%"   -- evita pegar só runtime
         )
         or SMS_R_SYSTEM.ResourceId in (
             select ARP64.ResourceId
             from SMS_G_System_ADD_REMOVE_PROGRAMS_64 as ARP64
             where
                    ARP64.DisplayName like "Microsoft Edge%"
-                and ARP64.DisplayName not like "%WebView2%"
         )
     )
