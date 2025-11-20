@@ -49,11 +49,14 @@ $results = foreach ($item in $filesToCheck) {
                 $status = "Found"
             }
             else {
-                if ([version]$currentVersion -ge [version]$item.ExpectedVersion) {
-                    $status = "OK (>= expected)"
+                if ([version]$currentVersion -eq [version]$item.ExpectedVersion) {
+                    $status = "OK"
+                }
+                elseif ([version]$currentVersion -lt [version]$item.ExpectedVersion) {
+                    $status = "Outdated"
                 }
                 else {
-                    $status = "Outdated (< expected)"
+                    $status = "NewerThanExpected"
                 }
             }
         }
@@ -72,8 +75,6 @@ $results = foreach ($item in $filesToCheck) {
     }
 }
 
-$results | Format-Table -AutoSize
-
 $folderPath = "C:\Temp\OfficeFilesVersion"
 if (-not (Test-Path $folderPath)) {
     New-Item -Path $folderPath -ItemType Directory -Force | Out-Null
@@ -83,3 +84,5 @@ $fileName = "{0}_OfficeFilesVersion.csv" -f $env:COMPUTERNAME
 $filePath = Join-Path $folderPath $fileName
 
 $results | Export-Csv -Path $filePath -NoTypeInformation -Encoding UTF8
+
+$results
