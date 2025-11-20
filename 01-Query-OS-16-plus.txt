@@ -1,4 +1,4 @@
-select
+select distinct
     SMS_R_SYSTEM.ResourceID,
     SMS_R_SYSTEM.ResourceType,
     SMS_R_SYSTEM.Name,
@@ -6,10 +6,9 @@ select
     SMS_R_SYSTEM.ResourceDomainORWorkgroup,
     SMS_R_SYSTEM.Client
 from SMS_R_SYSTEM
+inner join SMS_G_System_OPERATING_SYSTEM as OS
+        on SMS_R_SYSTEM.ResourceID = OS.ResourceID
 where
-    SMS_R_SYSTEM.NetbiosName like "%TS%"
-    and (
-           SMS_R_SYSTEM.OperatingSystemNameandVersion like "%Server 2016%"
-        or SMS_R_SYSTEM.OperatingSystemNameandVersion like "%Server 2019%"
-        or SMS_R_SYSTEM.OperatingSystemNameandVersion like "%Server 2022%"
-    )
+       OS.Caption like "%Windows Server 2016%"
+    or OS.Caption like "%Windows Server 2019%"
+    or OS.Caption like "%Windows Server 2022%"
