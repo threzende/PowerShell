@@ -6,9 +6,22 @@ select distinct
     SMS_R_SYSTEM.ResourceDomainORWorkgroup,
     SMS_R_SYSTEM.Client
 from SMS_R_SYSTEM
-inner join SMS_G_System_ADD_REMOVE_PROGRAMS as ARP
-        on SMS_R_SYSTEM.ResourceID = ARP.ResourceID
 where
-       ARP.DisplayName like "Microsoft 365%"
-    or ARP.DisplayName like "%Office 365%"
-    or ARP.DisplayName like "Microsoft 365 Apps for enterprise%"
+    SMS_R_SYSTEM.ResourceId in (
+        select ARP.ResourceId
+        from SMS_G_System_ADD_REMOVE_PROGRAMS as ARP
+        where
+               ARP.DisplayName like "Microsoft 365%"
+            or ARP.DisplayName like "Microsoft Office 365%"
+            or ARP.DisplayName like "%Office 365 ProPlus%"
+            or ARP.DisplayName like "%Microsoft 365 Apps%"
+    )
+    or SMS_R_SYSTEM.ResourceId in (
+        select ARP64.ResourceId
+        from SMS_G_System_ADD_REMOVE_PROGRAMS_64 as ARP64
+        where
+               ARP64.DisplayName like "Microsoft 365%"
+            or ARP64.DisplayName like "Microsoft Office 365%"
+            or ARP64.DisplayName like "%Office 365 ProPlus%"
+            or ARP64.DisplayName like "%Microsoft 365 Apps%"
+    )
