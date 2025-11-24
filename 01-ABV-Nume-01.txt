@@ -1,6 +1,10 @@
 Sub InserirLinha3()
     Rows("3:3").Insert Shift:=xlDown, CopyOrigin:=xlFormatFromRightOrBelow
 
+    Range("A3:E3").Interior.Color = RGB(255, 200, 200)
+    Range("A3:E3").Font.Color = RGB(255, 0, 0)
+    Range("A3:E3").Font.Bold = True
+
     Range("AA1").Copy
     Range("A3").PasteSpecial Paste:=xlPasteValidation
     Range("A3").Value = "Task"
