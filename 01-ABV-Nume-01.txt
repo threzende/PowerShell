@@ -75,7 +75,6 @@ End Sub
 03 ########################################################################################
 
 
-
 Sub OrganizeAgenda()
     Dim ws As Worksheet
     Dim LastRow As Long
@@ -85,14 +84,13 @@ Sub OrganizeAgenda()
     ws.AutoFilterMode = False
     
     LastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
-    If LastRow < 3 Then Exit Sub
     
-    ws.Range("A3:E" & LastRow).Sort _
-        Key1:=ws.Range("D3"), _
+    ws.Range("A2:E" & LastRow).Sort _
+        Key1:=ws.Range("E2"), _
         Order1:=xlAscending, _
-        Header:=xlNo
+        Header:=xlYes
         
-    ws.Range("A2:E" & LastRow).AutoFilter Field:=2, Criteria1:="<>X"
+    ws.Range("A2:E" & LastRow).AutoFilter Field:=4, Criteria1:="<>X"
     
 End Sub
 
