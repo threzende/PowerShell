@@ -1,0 +1,40 @@
+@echo off
+color 4F
+title AGGRESSIVE DISM/UPDATE RESET
+echo STARTING AGGRESSIVE CLEANUP...
+
+net stop wuauserv
+net stop cryptSvc
+net stop bits
+net stop msiserver
+taskkill /F /FI "SERVICES eq wuauserv" >nul 2>&1
+taskkill /F /FI "SERVICES eq cryptSvc" >nul 2>&1
+taskkill /F /FI "SERVICES eq trustedinstaller" >nul 2>&1
+
+echo [INFO] Deleting Registry Locks...
+reg delete "HKLM\COMPONENTS" /v PendingXmlIdentifier /f >nul 2>&1
+reg delete "HKLM\COMPONENTS" /v NextQueueEntryIndex /f >nul 2>&1
+reg delete "HKLM\COMPONENTS" /v AdvancedInstallersNeedResolving /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\SessionsPending" /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired" /f >nul 2>&1
+
+echo [INFO] Resetting Distribution Folders...
+if exist %systemroot%\SoftwareDistribution ren %systemroot%\SoftwareDistribution SoftwareDistribution.bak.%random%
+if exist %systemroot%\System32\catroot2 ren %systemroot%\System32\catroot2 catroot2.bak.%random%
+
+echo [INFO] Clearing BITS Queue...
+del /f /q "%ALLUSERSPROFILE%\Microsoft\Network\Downloader\qmgr*.dat" >nul 2>&1
+
+echo [INFO] Resetting Security Descriptors...
+sc sdset wuauserv D:(A;;CCLCSWRPWPDTLOCRRC;;;SY)(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;BA)(A;;CCLCSWLOCRRC;;;AU)(A;;CCLCSWRPWPDTLOCRRC;;;PU) >nul 2>&1
+sc sdset bits D:(A;;CCLCSWRPWPDTLOCRRC;;;SY)(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;BA)(A;;CCLCSWLOCRRC;;;AU)(A;;CCLCSWRPWPDTLOCRRC;;;PU) >nul 2>&1
+sc sdset cryptsvc D:(A;;CCLCSWRPWPDTLOCRRC;;;SY)(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;BA)(A;;CCLCSWLOCRRC;;;AU)(A;;CCLCSWRPWPDTLOCRRC;;;PU) >nul 2>&1
+
+echo [INFO] Restarting Services...
+net start wuauserv
+net start cryptSvc
+net start bits
+net start msiserver
+
+echo DONE. PLEASE REBOOT AND RUN DISM RESTOREHEALTH.
+pause
