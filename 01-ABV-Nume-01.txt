@@ -1,11 +1,17 @@
 Sub InserirLinha3()
     Rows("3:3").Insert Shift:=xlDown, CopyOrigin:=xlFormatFromRightOrBelow
-    
+
     Range("AA1").Copy
     Range("A3").PasteSpecial Paste:=xlPasteValidation
-    
     Range("A3").Value = "Task"
-    
+
+    Range("AC1").Copy
+    Range("B3").PasteSpecial Paste:=xlPasteValuesAndNumberFormats
+
+    Range("AB1").Copy
+    Range("D3").PasteSpecial Paste:=xlPasteValidation
+    Range("D3").Value = "Doing"
+
     Application.CutCopyMode = False
     Range("A3").Select
 End Sub
