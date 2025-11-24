@@ -133,3 +133,39 @@ End Sub
 
 
 06 ########################################################################################
+
+REV2
+
+Sub InserirLinha3()
+    Rows("3:3").Insert Shift:=xlDown, CopyOrigin:=xlFormatFromRightOrBelow
+
+    ' --- Pinta o Fundo e a Fonte ---
+    Range("A3:E3").Interior.Color = RGB(255, 200, 200)
+    Range("A3:E3").Font.Color = RGB(255, 0, 0)
+    Range("A3:E3").Font.Bold = True
+
+    ' --- Aplica a Borda Cinza Claro em TUDO (Grade) ---
+    With Range("A3:E3").Borders
+        .LineStyle = xlContinuous
+        .Weight = xlThin
+        .Color = RGB(217, 217, 217)
+    End With
+
+    ' --- Configura os Dados ---
+    Range("AA1").Copy
+    Range("A3").PasteSpecial Paste:=xlPasteValidation
+    Range("A3").Value = "Task"
+
+    Range("AC1").Copy
+    Range("B3").PasteSpecial Paste:=xlPasteValuesAndNumberFormats
+
+    Range("AB1").Copy
+    Range("D3").PasteSpecial Paste:=xlPasteValidation
+    Range("D3").Value = "Doing"
+
+    Application.CutCopyMode = False
+    Range("A3").Select
+End Sub
+
+
+07 ########################################################################################
