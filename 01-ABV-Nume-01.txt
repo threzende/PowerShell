@@ -99,7 +99,11 @@ End Sub
 
 
 
+Sub DeleteSelectedRow()
+    Selection.EntireRow.Delete
+End Sub
 
 
 
+05 ########################################################################################
 
