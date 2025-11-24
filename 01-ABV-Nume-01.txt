@@ -107,3 +107,29 @@ End Sub
 
 05 ########################################################################################
 
+
+Sub AddLogWithDate()
+    Dim CurrentText As String
+    Dim Timestamp As String
+    Dim NewText As String
+
+    Timestamp = Format(Now, "dd/mm/yyyy hh:mm")
+    CurrentText = ActiveCell.Value
+
+    If Len(CurrentText) > 0 Then
+        NewText = CurrentText & Chr(10) & "| " & Timestamp & ": "
+    Else
+        NewText = "| " & Timestamp & ": "
+    End If
+
+    With ActiveCell
+        .Value = NewText
+        .WrapText = True
+        .VerticalAlignment = xlTop
+    End With
+End Sub
+
+
+
+
+06 ########################################################################################
