@@ -38,3 +38,41 @@ net start msiserver
 
 echo DONE. PLEASE REBOOT AND RUN DISM RESTOREHEALTH.
 pause
+
+
+
+
+02 ################################################################
+
+@echo off
+color 60
+title RECENT UPDATE FIXES (AUG 2024 - NOV 2025)
+echo APPLYING FIXES FOR RECENT WINDOWS SERVER UPDATE BUGS...
+
+echo [INFO] Fixing WINEVT Publisher Locks (Error 0x800f0922)...
+reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\WINEVT\Publishers\{e7ef96be-969f-414f-97d7-3ddb7b558ccc}" /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\WINEVT\Publishers\{8c416c79-d49b-4f01-a467-e56d3aa8234c}" /f >nul 2>&1
+
+echo [INFO] Fixing SecureBoot Encode UEFI Tasks...
+for /f "tokens=3" %%a in ('reg query "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\TaskCache\Tree\Microsoft\Windows\PI\SecureBootEncodeUEFI" /v Id 2^>nul') do (
+    reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\TaskCache\Maintenance\%%a" /f >nul 2>&1
+    reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\TaskCache\Plain\%%a" /f >nul 2>&1
+    reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\TaskCache\Tasks\%%a" /f >nul 2>&1
+    reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\TaskCache\Tree\Microsoft\Windows\PI\SecureBootEncodeUEFI" /f >nul 2>&1
+)
+
+echo [INFO] Fixing UAC Installer Loop (KB5043076 fix)...
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Installer" /v DisableLUAInRepair /t REG_DWORD /d 1 /f >nul 2>&1
+
+echo [INFO] Fixing Cryptography RSA Override (KB5041578 fix)...
+reg add "HKLM\SOFTWARE\Microsoft\Cryptography\Calais" /v DisableCapiOverrideForRSA /t REG_DWORD /d 0 /f >nul 2>&1
+
+echo [INFO] Disabling Disposable Client VM (KB5068861 Nov/2025 fix)...
+dism /Online /Disable-Feature /FeatureName:Containers-DisposableClientVM /NoRestart >nul 2>&1
+
+echo [INFO] Cleaning up AppReadiness...
+del /F /Q "C:\ProgramData\Microsoft\Windows\AppReadiness\*" >nul 2>&1
+del /F /Q "C:\Windows\System32\AppReadiness\*" >nul 2>&1
+
+echo DONE. REBOOT REQUIRED.
+pause
