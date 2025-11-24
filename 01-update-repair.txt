@@ -76,3 +76,10 @@ del /F /Q "C:\Windows\System32\AppReadiness\*" >nul 2>&1
 
 echo DONE. REBOOT REQUIRED.
 pause
+
+
+04 ###################################################
+
+echo [INFO] Removing Corrupt WINEVT Publishers (Fixes 0x800f0922)...
+reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\WINEVT\Publishers\{e7ef96be-969f-414f-97d7-3ddb7b558ccc}" /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\WINEVT\Publishers\{8c416c79-d49b-4f01-a467-e56d3aa8234c}" /f >nul 2>&1
