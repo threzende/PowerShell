@@ -19,3 +19,57 @@ Sub InserirLinha3()
     Application.CutCopyMode = False
     Range("A3").Select
 End Sub
+
+
+02 ########################################################################################
+
+
+Sub PintarAzul()
+    Dim Linha As Long
+    Linha = ActiveCell.Row
+    Range("A" & Linha & ":E" & Linha).Interior.Color = RGB(220, 235, 255)
+    Range("A" & Linha & ":E" & Linha).Font.Color = RGB(0, 50, 160)
+    Range("A" & Linha & ":E" & Linha).Font.Bold = True
+End Sub
+
+Sub PintarVerde()
+    Dim Linha As Long
+    Linha = ActiveCell.Row
+    Range("A" & Linha & ":E" & Linha).Interior.Color = RGB(220, 255, 220)
+    Range("A" & Linha & ":E" & Linha).Font.Color = RGB(0, 128, 0)
+    Range("A" & Linha & ":E" & Linha).Font.Bold = True
+End Sub
+
+Sub PintarRoxoEscuro()
+    Dim Linha As Long
+    Linha = ActiveCell.Row
+    Range("A" & Linha & ":E" & Linha).Interior.Color = RGB(230, 220, 255)
+    Range("A" & Linha & ":E" & Linha).Font.Color = RGB(75, 0, 130)
+    Range("A" & Linha & ":E" & Linha).Font.Bold = True
+End Sub
+
+Sub PintarLaranja()
+    Dim Linha As Long
+    Linha = ActiveCell.Row
+    Range("A" & Linha & ":E" & Linha).Interior.Color = RGB(255, 235, 200)
+    Range("A" & Linha & ":E" & Linha).Font.Color = RGB(200, 80, 0)
+    Range("A" & Linha & ":E" & Linha).Font.Bold = True
+End Sub
+
+Sub PintarVermelho()
+    Dim Linha As Long
+    Linha = ActiveCell.Row
+    Range("A" & Linha & ":E" & Linha).Interior.Color = RGB(255, 215, 215)
+    Range("A" & Linha & ":E" & Linha).Font.Color = RGB(255, 0, 0)
+    Range("A" & Linha & ":E" & Linha).Font.Bold = True
+End Sub
+
+Sub PintarVioleta()
+    Dim Linha As Long
+    Linha = ActiveCell.Row
+    Range("A" & Linha & ":E" & Linha).Interior.Color = RGB(250, 210, 255)
+    Range("A" & Linha & ":E" & Linha).Font.Color = RGB(160, 0, 200)
+    Range("A" & Linha & ":E" & Linha).Font.Bold = True
+End Sub
+
+03 ########################################################################################
