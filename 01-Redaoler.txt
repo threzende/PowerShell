@@ -34,3 +34,7 @@
 })();
 
 javascript:(function(){var s=60;var w=window.open("","Refresher","width=300,height=150");if(!w){alert("Permita popups!");return}w.document.write("<html><body style='background:#222;color:#0f0;font-family:monospace;text-align:center;padding:20px;'><h3>RELOADER</h3><div id='s'>...</div><script>setInterval(function(){if(window.opener&&!window.opener.closed){window.opener.location.reload();document.getElementById('s').innerText='Refresh: '+new Date().toLocaleTimeString()}else{window.close()}},"+s+"*1000)</script></body></html>");})();
+
+
+
+javascript:(function(){ setInterval(function(){ location.reload(); }, 30000); })();
