@@ -1,23 +1,41 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Tab Reloader Local</title>
-    <style>
-        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
-        iframe { width: 100%; height: 100%; border: none; }
-    </style>
-</head>
-<body>
-    <iframe id="meuSite" src="https://www.bing.com"></iframe>
+(function() {
+    // CONFIGURAÇÃO: Tempo em segundos
+    var segundos = 60; 
+    
+    // Cria uma janelinha pop-up em branco
+    var win = window.open("", "ControladorRefresh", "width=300,height=150,top=0,left=0");
+    
+    if (!win) {
+        alert("O Edge bloqueou o Pop-up. Por favor, permita pop-ups para este site na barra de endereço e tente novamente.");
+        return;
+    }
 
-    <script>
-        // Defina o tempo em segundos aqui (ex: 60 = 1 minuto)
-        var segundos = 60;
+    // Escreve o script DENTRO da janelinha pop-up
+    win.document.write(`
+        <html>
+        <head><title>Controlador</title></head>
+        <body style="background-color:#222; color:#0f0; font-family:monospace; text-align:center; padding-top:20px;">
+            <h3>RELOADER ATIVO</h3>
+            <p>Alvo: Janela Principal</p>
+            <div id="status">Aguardando...</div>
+            <script>
+                var intervalo = ${segundos} * 1000;
+                setInterval(function(){
+                    if (window.opener && !window.opener.closed) {
+                        // Manda a janela PAI recarregar
+                        window.opener.location.reload();
+                        
+                        var hora = new Date().toLocaleTimeString();
+                        document.getElementById('status').innerText = 'Refresh: ' + hora;
+                    } else {
+                        document.body.innerHTML = '<h3 style="color:red">Janela principal fechada.</h3>';
+                    }
+                }, intervalo);
+            </script>
+        </body>
+        </html>
+    `);
+})();
 
-        setInterval(function() {
-            document.getElementById('meuSite').src = document.getElementById('meuSite').src;
-            console.log("Página atualizada: " + new Date().toLocaleTimeString());
-        }, segundos * 1000);
-    </script>
-</body>
-</html>
+
+javascript:(function(){var s=60;var w=window.open("","Refresher","width=300,height=150");if(!w){alert("Permita popups!");return}w.document.write("<html><body style='background:#222;color:#0f0;font-family:monospace;text-align:center;padding:20px;'><h3>RELOADER</h3><div id='s'>...</div><script>setInterval(function(){if(window.opener&&!window.opener.closed){window.opener.location.reload();document.getElementById('s').innerText='Refresh: '+new Date().toLocaleTimeString()}else{window.close()}},"+s+"*1000)</script></body></html>");})();
