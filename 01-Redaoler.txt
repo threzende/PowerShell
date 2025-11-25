@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tab Reloader Local</title>
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+        iframe { width: 100%; height: 100%; border: none; }
+    </style>
+</head>
+<body>
+    <iframe id="meuSite" src="https://www.bing.com"></iframe>
+
+    <script>
+        // Defina o tempo em segundos aqui (ex: 60 = 1 minuto)
+        var segundos = 60;
+
+        setInterval(function() {
+            document.getElementById('meuSite').src = document.getElementById('meuSite').src;
+            console.log("Página atualizada: " + new Date().toLocaleTimeString());
+        }, segundos * 1000);
+    </script>
+</body>
+</html>
