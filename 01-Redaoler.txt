@@ -1,9 +1,4 @@
 (function() {
-    // CONFIGURAÇÃO: Tempo em segundos
-    var segundos = 60; 
-    
-    // Cria uma janelinha pop-up em branco
-(function() {
     var seconds = 60; 
     
     var popup = window.open("", "RefreshController", "width=300,height=150,top=0,left=0");
