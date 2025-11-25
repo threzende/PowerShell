@@ -38,3 +38,6 @@ javascript:(function(){var s=60;var w=window.open("","Refresher","width=300,heig
 
 
 javascript:(function(){ setInterval(function(){ location.reload(); }, 30000); })();
+
+
+javascript:(function(){var seconds=prompt("Enter interval in seconds:","60");if(!seconds)return;var popup=window.open("","ReloaderPopup","width=300,height=150,top=0,left=0");if(!popup){alert("Popup blocked. Please allow popups.");return}popup.document.write("<html><head><title>Reloader</title></head><body style='background:#222;color:#0f0;font-family:monospace;text-align:center;padding-top:20px;'><h3>RELOADER ACTIVE</h3><div id='status'>Waiting...</div><script>var interval="+seconds+"*1000;setInterval(function(){if(window.opener&&!window.opener.closed){window.opener.location.reload();var time=new Date().toLocaleTimeString();document.getElementById('status').innerText='Last refresh: '+time}else{window.close()}},interval)</script></body></html>");})();
